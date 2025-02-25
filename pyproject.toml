@@ -7,8 +7,9 @@ requires-python = ">=3.13"
 dependencies = [
     "click>=8.1.8",
     "psycopg==3.2.1",
+    "python-dotenv>=1.0.1",
     "requests>=2.32.3",
-    "structlog>=24.1.0"
+    "structlog>=24.1.0",
 ]
 
 [project.scripts]
