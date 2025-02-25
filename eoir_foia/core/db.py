@@ -4,6 +4,7 @@ import psycopg
 from datetime import datetime
 from typing import Optional
 from eoir_foia.settings import DATABASE_URL
+from eoir_foia.core.download import FileMetadata
 
 @contextmanager
 def get_db_connection():
@@ -29,26 +30,29 @@ def init_download_tracking():
                     etag TEXT NOT NULL,
                     local_path TEXT NOT NULL,
                     status TEXT NOT NULL
-                )
+                );
+                CREATE INDEX IF NOT EXISTS download_history_id_idx ON download_history(id);
             """)
         conn.commit()
 
-def get_latest_download() -> Optional[dict]:
-    """Get most recent download record."""
+def get_latest_download() -> Optional[FileMetadata]:
+    """Get most recent successful download record."""
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT * FROM download_history 
+                SELECT content_length, last_modified, etag
+                FROM download_history 
+                WHERE status = 'completed'
                 ORDER BY download_date DESC 
                 LIMIT 1
             """)
             result = cur.fetchone()
             if result:
-                return dict(zip(
-                    ['id', 'download_date', 'content_length', 
-                     'last_modified', 'etag', 'local_path', 'status'],
-                    result
-                ))
+                return FileMetadata(
+                    content_length=result[0],
+                    last_modified=result[1],
+                    etag=result[2]
+                )
     return None
 
 def record_download(
