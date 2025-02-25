@@ -1,5 +1,5 @@
 import click
-from eoir_foia.cli import db, clean
+from eoir_foia.cli import db, clean, download
 
 @click.group()
 def cli():
@@ -8,6 +8,7 @@ def cli():
 
 cli.add_command(db.db)
 cli.add_command(clean.clean)
+cli.add_command(download.download)
 
 if __name__ == "__main__":
     cli()
