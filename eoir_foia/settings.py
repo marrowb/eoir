@@ -14,6 +14,7 @@ pg_port = os.getenv("POSTGRES_PORT", "5432")
 pg_db = os.getenv("POSTGRES_DB", pg_user)
 
 DATABASE_URL = f"postgresql://{pg_user}:{pg_pass}@{pg_host}:{pg_port}/{pg_db}"
+ADMIN_URL = f"postgresql://{pg_user}:{pg_pass}@{pg_host}:{pg_port}/postgres"
 
 # Logging
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")

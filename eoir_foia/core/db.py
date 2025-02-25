@@ -17,6 +17,31 @@ def get_db_connection():
         if conn:
             conn.close()
 
+@contextmanager
+def get_admin_connection():
+    """Get an admin connection to create database."""
+    conn = None
+    try:
+        conn = psycopg.connect(conninfo=ADMIN_URL)
+        conn.autocommit = True
+        yield conn
+    finally:
+        if conn:
+            conn.close()
+
+def create_database():
+    """Create database if it doesn't exist."""
+    try:
+        # Try connecting to target database first
+        with get_db_connection():
+            return False
+    except psycopg.OperationalError:
+        # Database doesn't exist, create it
+        with get_admin_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(f"CREATE DATABASE {pg_db}")
+        return True
+
 def init_download_tracking():
     """Initialize download tracking table."""
     with get_db_connection() as conn:
