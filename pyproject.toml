@@ -1,11 +1,15 @@
 [project]
 name = "eoir-foia"
 version = "0.1.0"
-description = "Add your description here"
+description = "EOIR FOIA data processing tools"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "click>=8.1.8",
     "psycopg==3.2.1",
     "requests>=2.32.3",
+    "structlog>=24.1.0"
 ]
+
+[project.scripts]
+eoir-foia = "main:cli"
