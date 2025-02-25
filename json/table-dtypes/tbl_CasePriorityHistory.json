@@ -1,0 +1,7 @@
+{
+    "idnCasePriHistory": "integer",
+    "casePriority_code": "text",
+    "idnCase": "integer",
+    "DATCREATEDON": "timestamp without time zone",
+    "DATMODIFIEDON": "timestamp without time zone"
+}

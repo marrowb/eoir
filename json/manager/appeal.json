@@ -1,0 +1,10 @@
+{
+    "AlienBriefDue": "brief_due",
+    "AlienBriefFiled": "brief_filed",
+    "BIADecision": "bia_dec",
+    "BIADecisionDate": "dec_date",
+    "DHSBriefDue": "dhs_brief_due",
+    "DHSBriefFiled": "dhs_brief_filed",
+    "FiledDate": "filed",
+    "anum": "anum"
+}

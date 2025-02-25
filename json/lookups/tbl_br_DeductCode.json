@@ -1,0 +1,10 @@
+{
+    "D1": "Late arrival at window, present in Courtroom",
+    "D2": "Late arrival at window, not present in Courtroom",
+    "D3": "Timely arrival at window, late in Courtroom",
+    "D4": "Failure to get COI date stamped",
+    "D5": "Inadequate interpreter",
+    "D6": "Partial NoShow, non-detained  ($400)",
+    "D7": "Partial NoShow, detained  ($800)",
+    "NaN": "No Deduction"
+}

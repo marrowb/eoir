@@ -1,0 +1,8 @@
+{
+    "idnJuvenileHistory": "integer",
+    "idnCase": "integer",
+    "idnProceeding": "integer",
+    "idnJuvenile": "integer",
+    "DATCREATEDON": "timestamp without time zone",
+    "DATMODIFIEDON": "timestamp without time zone"
+}
