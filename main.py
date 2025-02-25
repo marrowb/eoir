@@ -1,5 +1,5 @@
 import click
-from eoir_foia.cli import db, clean, download
+from .cli import db, clean, download
 
 @click.group()
 def cli():
