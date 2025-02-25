@@ -38,8 +38,15 @@ def check_file_status() -> Tuple[FileMetadata, bool]:
         response.raise_for_status()
         metadata = FileMetadata.from_headers(response.headers)
         
-        # TODO: Compare with database record to determine if new version
-        is_new = True  # Placeholder until we add database comparison
+        # Compare with latest download record
+        latest = get_latest_download()
+        is_new = True
+        
+        if latest:
+            is_new = (
+                metadata.etag != latest['etag'] or
+                metadata.content_length != latest['content_length']
+            )
         
         return metadata, is_new
     except requests.RequestException as e:
@@ -49,7 +56,8 @@ def check_file_status() -> Tuple[FileMetadata, bool]:
 def download_file(
     output_path: Path,
     metadata: FileMetadata,
-    retry: bool = True
+    retry: bool = True,
+    progress_callback: Optional[callable] = None
 ) -> Path:
     """
     Download EOIR FOIA zip file.
@@ -64,13 +72,25 @@ def download_file(
             
             # Write file with progress tracking
             total = int(response.headers.get('content-length', 0))
+            downloaded = 0
             
             with open(output_path, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=8192):
                     if chunk:
+                        downloaded += len(chunk)
                         f.write(chunk)
-                        # Progress will be tracked by CLI layer
-                        
+                        if progress_callback:
+                            progress_callback(downloaded, total)
+            
+            # Record successful download
+            record_download(
+                content_length=metadata.content_length,
+                last_modified=metadata.last_modified,
+                etag=metadata.etag,
+                local_path=str(output_path),
+                status="completed"
+            )
+            
         return output_path
     except requests.RequestException as e:
         logger.error("Failed to download file", error=str(e))
