@@ -81,10 +81,9 @@ def status():
         latest = get_latest_download()
         if latest:
             click.echo("Latest download:")
-            click.echo(f"Date: {latest['download_date']}")
-            click.echo(f"Size: {latest['content_length']:,} bytes")
-            click.echo(f"Status: {latest['status']}")
-            click.echo(f"Path: {latest['local_path']}")
+            click.echo(f"Size: {latest.content_length:,} bytes")
+            click.echo(f"Last Modified: {latest.last_modified}")
+            click.echo(f"ETag: {latest.etag}")
         else:
             click.echo("No downloads recorded")
     except Exception as e:

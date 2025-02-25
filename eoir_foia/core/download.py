@@ -44,8 +44,8 @@ def check_file_status() -> Tuple[FileMetadata, bool]:
         
         if latest:
             is_new = (
-                metadata.etag != latest['etag'] or
-                metadata.content_length != latest['content_length']
+                metadata.etag != latest.etag or
+                metadata.content_length != latest.content_length
             )
         
         return metadata, is_new

@@ -12,3 +12,4 @@ LOG_DIR = Path("logs")
 # Download
 EOIR_FOIA_URL = "https://fileshare.eoir.justice.gov/FOIA-TRAC-Report.zip"
 DOWNLOAD_DIR = Path("downloads")
+DOWNLOAD_DIR.mkdir(exist_ok=True)
