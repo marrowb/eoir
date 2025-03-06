@@ -50,7 +50,7 @@ def init_download_tracking():
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                CREATE TABLE IF NOT EXISTS download_history (
+                CREATE TABLE IF NOT EXISTS eoir_foia_download_history (
                     id SERIAL PRIMARY KEY,
                     download_date TIMESTAMP NOT NULL,
                     content_length BIGINT NOT NULL,
@@ -59,7 +59,7 @@ def init_download_tracking():
                     local_path TEXT NOT NULL,
                     status TEXT NOT NULL
                 );
-                CREATE INDEX IF NOT EXISTS download_history_id_idx ON download_history(id);
+                CREATE INDEX IF NOT EXISTS eoir_foia_download_history_id_idx ON eoir_foia_download_history(id);
             """)
         conn.commit()
 
@@ -70,7 +70,7 @@ def get_latest_download() -> Optional[FileMetadata]:
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT content_length, last_modified, etag
-                FROM download_history 
+                FROM eoir_foia_download_history 
                 WHERE status = 'completed'
                 ORDER BY download_date DESC 
                 LIMIT 1
@@ -96,7 +96,7 @@ def record_download(
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                INSERT INTO download_history 
+                INSERT INTO eoir_foia_download_history 
                 (download_date, content_length, last_modified, 
                  etag, local_path, status)
                 VALUES (NOW(), %s, %s, %s, %s, %s)
