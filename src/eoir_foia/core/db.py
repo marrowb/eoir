@@ -34,16 +34,15 @@ def get_admin_connection():
 @db_operation
 def create_database():
     """Create database if it doesn't exist."""
-    try:
-        # Try connecting to target database first
-        with get_db_connection():
-            return False
-    except psycopg.OperationalError:
-        # Database doesn't exist, create it
-        with get_admin_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(f"CREATE DATABASE {pg_db}")
-        return True
+    # Try connecting to target database first
+    with get_db_connection():
+        return False
+    
+    # If we get here, database doesn't exist, so create it
+    with get_admin_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(f"CREATE DATABASE {pg_db}")
+    return True
 
 @db_operation
 def init_download_tracking():

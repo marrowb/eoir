@@ -1,7 +1,7 @@
 """Database management commands."""
 import click
 import structlog
-from eoir_foia.core.db import create_database
+from eoir_foia.core.db import create_database, init_download_tracking
 from eoir_foia.settings import pg_db
 
 logger = structlog.get_logger()
