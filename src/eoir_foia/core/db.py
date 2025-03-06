@@ -85,7 +85,7 @@ def get_latest_download() -> Optional[FileMetadata]:
     return None
 
 @db_operation
-def record_download(
+def record_download_in_history(
     content_length: int,
     last_modified: datetime,
     etag: str,

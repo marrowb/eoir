@@ -5,7 +5,7 @@ from pathlib import Path
 import structlog
 from typing import Optional, Tuple
 from eoir_foia.settings import EOIR_FOIA_URL
-from eoir_foia.core.db import get_latest_download
+from eoir_foia.core.db import get_latest_download, record_download_in_history
 from eoir_foia.core.models import FileMetadata
 
 logger = structlog.get_logger()
@@ -64,7 +64,7 @@ def download_file(
                             progress_callback(downloaded, total)
             
             # Record successful download
-            record_download(
+            record_download_in_history(
                 content_length=metadata.content_length,
                 last_modified=metadata.last_modified,
                 etag=metadata.etag,
