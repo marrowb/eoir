@@ -45,15 +45,15 @@ def status():
 def fetch(no_retry: bool):
     """Download latest EOIR FOIA data."""
     try:
-        metadata, is_new = check_file_status()
+        current, local, message = check_file_status()
         
-        if not is_new:
-            click.echo("Already have latest version")
+        click.echo(message)
+        if current == local:
             return
             
         # Setup progress bar
         with click.progressbar(
-            length=metadata.content_length,
+            length=current.content_length,
             label='Downloading',
             fill_char='=',
             empty_char='-'
@@ -62,10 +62,10 @@ def fetch(no_retry: bool):
                 bar.update(downloaded - bar.pos)
             
             # Download with progress tracking
-            output_path = DOWNLOAD_DIR / f"FOIA-TRAC-{metadata.last_modified:%Y%m}.zip"
+            output_path = DOWNLOAD_DIR / f"FOIA-TRAC-{current.last_modified:%Y%m}.zip"
             download_file(
                 output_path=output_path,
-                metadata=metadata,
+                metadata=current,
                 retry=not no_retry,
                 progress_callback=update_progress
             )
