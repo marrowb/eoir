@@ -12,13 +12,15 @@ def db():
     pass
 
 @db.command()
-def create():
-    """Create database if it doesn't exist."""
+def init():
+    """Create database and tables if they don't exist."""
     try:
         if create_database():
             click.echo(f"Created database '{pg_db}'")
         else:
             click.echo(f"Database '{pg_db}' already exists")
+
+        if 
     except Exception as e:
-        logger.error("Database creation failed", error=str(e))
+        logger.error("Database initialization failed", error=str(e))
         raise click.ClickException(str(e))
