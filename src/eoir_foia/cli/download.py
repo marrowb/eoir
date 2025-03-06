@@ -42,6 +42,12 @@ def status():
     default=False,
     help="Disable automatic retry on failure",
 )
+@click.option(
+    "--no-unzip",
+    is_flag=True,
+    default=False,
+    help="Disable automatic unzipping of the file on download success",
+)
 def fetch(no_retry: bool):
     """Download latest EOIR FOIA data."""
     try:
@@ -71,6 +77,7 @@ def fetch(no_retry: bool):
             )
             
         click.echo(f"\nDownload complete: {output_path}")
+        # Implement unzipping
             
     except Exception as e:
         logger.error("Download failed", error=str(e))
