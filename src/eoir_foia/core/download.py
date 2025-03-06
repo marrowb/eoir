@@ -10,7 +10,7 @@ from eoir_foia.core.models import FileMetadata
 
 logger = structlog.get_logger()
 
-def check_file_status() -> Tuple[FileMetadata, bool]:
+def check_file_status() -> Tuple[FileMetadata, FileMetadata, str]:
     """
     Check status of remote file.
     Returns (metadata, is_new_version)
@@ -18,19 +18,18 @@ def check_file_status() -> Tuple[FileMetadata, bool]:
     try:
         response = requests.head(EOIR_FOIA_URL)
         response.raise_for_status()
-        metadata = FileMetadata.from_headers(response.headers)
+        current = FileMetadata.from_headers(response.headers)
         
         # Compare with latest download record
-        latest = get_latest_download()
-        is_new = True
-        
-        if latest:
-            is_new = (
-                metadata.etag != latest.etag or
-                metadata.content_length != latest.content_length
-            )
-        
-        return metadata, is_new
+        local = get_latest_download()
+        if not local:
+            message = "No local data available."
+        elif current != local:
+            message = "New Version Available:"
+        else:
+            message = "Already have latest version:"
+
+        return current, local, message
     except requests.RequestException as e:
         logger.error("Failed to check file status", error=str(e))
         raise

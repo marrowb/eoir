@@ -17,16 +17,19 @@ def download():
 
 
 @download.command()
-def check():
-    """Check if a new version is available."""
+def status():
+    """See if new files are available."""
     try:
-        metadata, is_new = check_file_status()
-        if is_new:
-            click.echo("New version available:")
-            click.echo(f"Size: {metadata.content_length:,} bytes")
-            click.echo(f"Last modified: {metadata.last_modified}")
-        else:
-            click.echo("Already have latest version")
+        current, local, message = check_file_status()
+        click.echo(message + "\n")
+
+        click.echo("Online version:")
+        click.echo(f"Last modified: {current.last_modified}")
+        click.echo(f"Size: {current.content_length:,} bytes")
+        if local:
+            click.echo("\nLocal Version:")
+            click.echo(f"Last modified: {local.last_modified}")
+            click.echo(f"Size: {local.content_length:,} bytes")
     except Exception as e:
         logger.error("Check failed", error=str(e))
         raise click.ClickException(str(e))
@@ -73,19 +76,3 @@ def fetch(no_retry: bool):
         logger.error("Download failed", error=str(e))
         raise click.ClickException(str(e))
 
-
-@download.command()
-def status():
-    """Show current download status."""
-    try:
-        latest, _ = check_file_status()
-        if latest:
-            click.echo("Latest download:")
-            click.echo(f"Size: {latest.content_length:,} bytes")
-            click.echo(f"Last Modified: {latest.last_modified}")
-            click.echo(f"ETag: {latest.etag}")
-        else:
-            click.echo("No downloads recorded")
-    except Exception as e:
-        logger.error("Status check failed", error=str(e))
-        raise click.ClickException(str(e))

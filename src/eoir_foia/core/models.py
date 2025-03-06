@@ -20,3 +20,11 @@ class FileMetadata:
             ),
             etag=headers.get('ETag', '').strip('"')
         )
+
+    def __eq__(self, value: object, /) -> bool:
+        if type(value) != type(self):
+            return False
+        return (self.etag == value.etag or
+                self.content_length == value.content_length)
+
+
