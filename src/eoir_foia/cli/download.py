@@ -5,7 +5,7 @@ from pathlib import Path
 import structlog
 from typing import Optional
 from eoir_foia.core.download import check_file_status, download_file
-from eoir_foia.core.db import get_latest_download, init_download_tracking
+from eoir_foia.core.db import init_download_tracking
 from eoir_foia.settings import DOWNLOAD_DIR
 
 logger = structlog.get_logger()
@@ -78,7 +78,7 @@ def get(no_retry: bool):
 def status():
     """Show current download status."""
     try:
-        latest = get_latest_download()
+        latest, _ = check_file_status()
         if latest:
             click.echo("Latest download:")
             click.echo(f"Size: {latest.content_length:,} bytes")
