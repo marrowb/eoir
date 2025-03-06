@@ -20,7 +20,8 @@ def init():
         else:
             click.echo(f"Database '{pg_db}' already exists")
 
-        if 
+        init_download_tracking()
+        click.echo("Initialized download tracking table")
     except Exception as e:
         logger.error("Database initialization failed", error=str(e))
         raise click.ClickException(str(e))

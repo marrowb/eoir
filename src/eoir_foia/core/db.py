@@ -6,6 +6,7 @@ from typing import Optional
 from eoir_foia.settings import DATABASE_URL
 from eoir_foia.settings import ADMIN_URL
 from eoir_foia.core.models import FileMetadata
+from eoir_foia.core.db_utils import db_operation
 
 @contextmanager
 def get_db_connection():
@@ -30,6 +31,7 @@ def get_admin_connection():
         if conn:
             conn.close()
 
+@db_operation
 def create_database():
     """Create database if it doesn't exist."""
     try:
@@ -43,6 +45,7 @@ def create_database():
                 cur.execute(f"CREATE DATABASE {pg_db}")
         return True
 
+@db_operation
 def init_download_tracking():
     """Initialize download tracking table."""
     with get_db_connection() as conn:
@@ -61,6 +64,7 @@ def init_download_tracking():
             """)
         conn.commit()
 
+@db_operation
 def get_latest_download() -> Optional[FileMetadata]:
     """Get most recent successful download record."""
     with get_db_connection() as conn:
@@ -81,6 +85,7 @@ def get_latest_download() -> Optional[FileMetadata]:
                 )
     return None
 
+@db_operation
 def record_download(
     content_length: int,
     last_modified: datetime,
