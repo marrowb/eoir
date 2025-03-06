@@ -35,10 +35,28 @@ def check_file_status() -> Tuple[FileMetadata, FileMetadata, str]:
         logger.error("Failed to check file status", error=str(e))
         raise
 
-def unzip(zip_file: Path, output_dir: str) -> None:
-    """Unzip the file and name it"""
+def unzip(zip_file: Path, metadata: FileMetadata) -> Path:
+    """
+    Unzip the FOIA file into a dated directory.
+    
+    Args:
+        zip_file: Path to the downloaded zip file
+        metadata: FileMetadata containing the last_modified date
+        
+    Returns:
+        Path to the directory containing the extracted files
+    """
+    # Create dated directory name based on metadata
+    extract_dir = zip_file.parent / f"{metadata.last_modified:%m%d%y}-FOIA-TRAC-FILES"
+    
+    # Ensure directory exists
+    extract_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Extract files
     with zipfile.ZipFile(zip_file, 'r') as zip_ref:
-        zip_ref.extractall(output_dir)
+        zip_ref.extractall(extract_dir)
+        
+    return extract_dir
 
 def download_file(
     output_path: Path,
