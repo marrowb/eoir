@@ -1,6 +1,7 @@
 """Common data models."""
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 
 @dataclass
 class FileMetadata:
@@ -8,6 +9,7 @@ class FileMetadata:
     content_length: int
     last_modified: datetime
     etag: str
+    local_path: Path
     
     @classmethod
     def from_headers(cls, headers: dict) -> "FileMetadata":
@@ -18,7 +20,7 @@ class FileMetadata:
                 headers.get('Last-Modified', ''), 
                 '%a, %d %b %Y %H:%M:%S GMT'
             ),
-            etag=headers.get('ETag', '').strip('"')
+            etag=headers.get('ETag', '').strip('"'),
         )
 
     def __eq__(self, value: object, /) -> bool:

@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 import structlog
 from typing import Optional
-from eoir_foia.core.download import check_file_status, download_file
+from eoir_foia.core.download import check_file_status, download_file, unzip
 from eoir_foia.core.db import init_download_tracking
 from eoir_foia.settings import DOWNLOAD_DIR
 
@@ -80,8 +80,8 @@ def fetch(no_retry: bool, no_unzip: bool):
         
         # Unzip if requested
         if not no_unzip:
-            extract_dir = unzip(output_path, current)
-            click.echo(f"Extracted to: {extract_dir}")
+            unzip(current)
+            click.echo(f"Extracted to downloads folder...")
             
     except Exception as e:
         logger.error("Download failed", error=str(e))

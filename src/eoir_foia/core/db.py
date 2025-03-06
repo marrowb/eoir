@@ -69,7 +69,7 @@ def get_latest_download() -> Optional[FileMetadata]:
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT content_length, last_modified, etag
+                SELECT content_length, last_modified, etag, local_path
                 FROM eoir_foia_download_history 
                 WHERE status = 'completed'
                 ORDER BY download_date DESC 
@@ -80,7 +80,8 @@ def get_latest_download() -> Optional[FileMetadata]:
                 return FileMetadata(
                     content_length=result[0],
                     last_modified=result[1],
-                    etag=result[2]
+                    etag=result[2],
+                    local_path=result[3]
                 )
     return None
 

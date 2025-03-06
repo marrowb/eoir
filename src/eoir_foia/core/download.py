@@ -1,13 +1,15 @@
 """Core download functionality for EOIR FOIA data."""
 from datetime import datetime
 import requests
-import zipfile
+import shutil
+from zipfile_deflate64 import ZipFile
 from pathlib import Path
 import structlog
 from typing import Optional, Tuple
 from eoir_foia.settings import EOIR_FOIA_URL
 from eoir_foia.core.db import get_latest_download, record_download_in_history
 from eoir_foia.core.models import FileMetadata
+from eoir_foia.settings import DOWNLOAD_DIR
 
 logger = structlog.get_logger()
 
@@ -35,27 +37,48 @@ def check_file_status() -> Tuple[FileMetadata, FileMetadata, str]:
         logger.error("Failed to check file status", error=str(e))
         raise
 
-def unzip(zip_file: Path, metadata: FileMetadata) -> Path:
+
+
+def unzip(metadata: FileMetadata) -> Path:
     """
     Unzip the FOIA file into a dated directory.
     
     Args:
-        zip_file: Path to the downloaded zip file
         metadata: FileMetadata containing the last_modified date
         
     Returns:
         Path to the directory containing the extracted files
     """
+    zip_file = DOWNLOAD_DIR / metadata.local_path
     # Create dated directory name based on metadata
-    extract_dir = zip_file.parent / f"{metadata.last_modified:%m%d%y}-FOIA-TRAC-FILES"
+    extract_dir = DOWNLOAD_DIR
+    dated_dir = extract_dir / f"{metadata.last_modified:%m%d%y}-FOIA-TRAC-FILES"
     
     # Ensure directory exists
     extract_dir.mkdir(parents=True, exist_ok=True)
     
-    # Extract files
-    with zipfile.ZipFile(zip_file, 'r') as zip_ref:
+    # Extract files using zipfile-deflate64
+    
+    with ZipFile(zip_file, 'r', allowZip64=True) as zip_ref:
         zip_ref.extractall(extract_dir)
+    
+    # Find the root folder that was extracted
+    # This assumes the zip contains a single root folder
+    extracted_items = [item for item in extract_dir.iterdir() 
+                      if item.is_dir() and item != dated_dir 
+                      and item.name not in (zip_file.stem, zip_file.name)]
+    
+    if extracted_items and len(extracted_items) == 1:
+        root_folder = extracted_items[0]
         
+        # If the dated directory already exists, remove it
+        if dated_dir.exists():
+            shutil.rmtree(dated_dir)
+            
+        # Rename the extracted root folder to the dated name
+        root_folder.rename(dated_dir)
+        return dated_dir
+    
     return extract_dir
 
 def download_file(
@@ -67,6 +90,7 @@ def download_file(
     progress_callback: Optional[callable] = None
 ) -> Path:
     """
+    
     Download EOIR FOIA zip file.
     Returns path to downloaded file.
     """
@@ -107,7 +131,7 @@ def download_file(
                     content_length=metadata.content_length,
                     last_modified=metadata.last_modified,
                     etag=metadata.etag,
-                    local_path=str(output_path),
+                    local_path=str(output_path).split('/')[1],
                     status="completed"
                 )
                     
