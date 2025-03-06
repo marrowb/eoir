@@ -39,7 +39,7 @@ def check():
     default=False,
     help="Disable automatic retry on failure",
 )
-def get(no_retry: bool):
+def fetch(no_retry: bool):
     """Download latest EOIR FOIA data."""
     try:
         metadata, is_new = check_file_status()
