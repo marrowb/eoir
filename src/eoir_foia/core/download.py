@@ -6,6 +6,7 @@ from pathlib import Path
 import structlog
 from typing import Optional, Tuple
 from eoir_foia.settings import EOIR_FOIA_URL
+from eoir_foia.core.db import get_latest_download
 
 logger = structlog.get_logger()
 
