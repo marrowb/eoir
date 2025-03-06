@@ -1,9 +1,0 @@
-{
-    "EOIRAttorneyID": "text",
-    "OldAttorneyID": "text",
-    "BaseCityCode": "tblLookupBaseCity.json",
-    "blnAttorneyActive": "integer",
-    "Source_Flag": "text",
-    "datCreatedOn": "timestamp without time zone",
-    "datModifiedOn": "timestamp without time zone"
-}

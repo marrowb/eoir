@@ -1,1 +1,0 @@
-"""Database metadata definitions."""

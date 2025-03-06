@@ -1,5 +1,0 @@
-{
-    "IDNCASEID": "integer",
-    "IDNCASE": "integer",
-    "CASE_ID": "^[A-Z]{2}$"
-}

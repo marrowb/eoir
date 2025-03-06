@@ -1,7 +1,0 @@
-{
-    "IDNCUSTODY": "integer",
-    "IDNCASE": "integer",
-    "CUSTODY": "text",
-    "DATDETAINED": "timestamp without time zone",
-    "DATRELEASED": "timestamp without time zone"
-}
