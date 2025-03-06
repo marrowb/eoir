@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Optional
 from eoir_foia.settings import DATABASE_URL
 from eoir_foia.settings import ADMIN_URL
-from eoir_foia.core.download import FileMetadata
+from eoir_foia.core.models import FileMetadata
 
 @contextmanager
 def get_db_connection():

@@ -1,5 +1,4 @@
 """Core download functionality for EOIR FOIA data."""
-from dataclasses import dataclass
 from datetime import datetime
 import requests
 from pathlib import Path
@@ -7,27 +6,9 @@ import structlog
 from typing import Optional, Tuple
 from eoir_foia.settings import EOIR_FOIA_URL
 from eoir_foia.core.db import get_latest_download
+from eoir_foia.core.models import FileMetadata
 
 logger = structlog.get_logger()
-
-@dataclass
-class FileMetadata:
-    """Metadata for EOIR FOIA download."""
-    content_length: int
-    last_modified: datetime
-    etag: str
-    
-    @classmethod
-    def from_headers(cls, headers: dict) -> "FileMetadata":
-        """Create FileMetadata from response headers."""
-        return cls(
-            content_length=int(headers.get('Content-Length', 0)),
-            last_modified=datetime.strptime(
-                headers.get('Last-Modified', ''), 
-                '%a, %d %b %Y %H:%M:%S GMT'
-            ),
-            etag=headers.get('ETag', '').strip('"')
-        )
 
 def check_file_status() -> Tuple[FileMetadata, bool]:
     """
