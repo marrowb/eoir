@@ -1,6 +1,0 @@
-{
-    "idn3MemberReferral": "integer",
-    "lngAppealID": "integer",
-    "datReferredTo3Member": "timestamp without time zone",
-    "datRemovedFromReferral": "timestamp without time zone"
-}

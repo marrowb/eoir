@@ -22,6 +22,10 @@ function help {
   printf "\nExtended help:\n  Each task has comments for general usage\n"
 }
 
+function psql {
+  PGPASSWORD=devpassword psql -h localhost -p 5432 -U bklg -d eoir_foia
+}
+
 # This idea is heavily inspired by: https://github.com/adriancooney/Taskfile
 TIMEFORMAT='\nTask completed in %3lR'
 time "${@:-help}"

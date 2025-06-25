@@ -4,16 +4,12 @@ from random import sample
 
 import click
 import psycopg
+from celery import group
+from config.definitions import DATA_DATE
 from flask import current_app
 from flask.cli import AppGroup
-from sqlalchemy_utils import create_database
-from sqlalchemy_utils import database_exists
-
-from bklg.blueprints.manager.tx import create_tx_functions
-from config.definitions import DATA_DATE
-from lib.util_cleancsv import CleanCsv
-from lib.util_cleancsv import open_db
-from celery import group
+from lib.util_cleancsv import CleanCsv, open_db
+from sqlalchemy_utils import create_database, database_exists
 
 app = current_app
 db_cli = AppGroup("db")
@@ -36,7 +32,7 @@ def init(ctx, postfix, with_testdb):
     """
 
     if with_testdb:
-        db_uri = app.config['SQLALCHEMY_DATABASE_URI']
+        db_uri = app.config["SQLALCHEMY_DATABASE_URI"]
 
         if not database_exists(db_uri):
             print("creating database")
@@ -78,7 +74,7 @@ def reset(ctx, with_testdb):
 )
 def drop_columns(stage_db):
     if stage_db:
-        conn_string = app.config['SQLALCHEMY_DATABASE_URI'].replace("+psycopg", "")
+        conn_string = app.config["SQLALCHEMY_DATABASE_URI"].replace("+psycopg", "")
         conn = psycopg.connect(conn_string)
 
     to_drop = {
@@ -102,7 +98,7 @@ def create_all_tx():
     Create all tables from bklg.blueprints.manager.tx
     Including those not currently included in prod server
     """
-    conn_string = app.config['SQLALCHEMY_DATABASE_URI'].replace("+psycopg", "")
+    conn_string = app.config["SQLALCHEMY_DATABASE_URI"].replace("+psycopg", "")
     conn = psycopg.connect(conn_string)
     with open_db(conn) as curs:
         for tx_name, create in create_tx_functions.items():
@@ -116,12 +112,13 @@ def create(postfix):
     """
     Create only those tables needed for the prod server.
     """
-    conn_string = app.config['SQLALCHEMY_DATABASE_URI'].replace("+psycopg", "")
+    conn_string = app.config["SQLALCHEMY_DATABASE_URI"].replace("+psycopg", "")
     conn = psycopg.connect(conn_string)
     with open_db(conn) as curs:
         tables = open("/app/sql-scripts/foia_tables.sql", "r").read()
-        tables = tables.replace('(%s)', postfix)
+        tables = tables.replace("(%s)", postfix)
         curs.execute(tables)
+
 
 @db_cli.command("index")
 @click.argument("postfix", type=str)
@@ -129,11 +126,11 @@ def create(postfix):
     """
     Create only those tables needed for the prod server.
     """
-    conn_string = app.config['SQLALCHEMY_DATABASE_URI'].replace("+psycopg", "")
+    conn_string = app.config["SQLALCHEMY_DATABASE_URI"].replace("+psycopg", "")
     conn = psycopg.connect(conn_string)
     with open_db(conn) as curs:
         file = open(f"/app/sql-scripts/post_copy.sql", "r").read()
-        file = file.replace('(%s)', postfix)
+        file = file.replace("(%s)", postfix)
         curs.execute(file)
 
 
@@ -146,7 +143,7 @@ def drop_foia(postfix):
     if not click.confirm("Are you sure you want to drop all tables?"):
         return
 
-    conn_string = app.config['SQLALCHEMY_DATABASE_URI'].replace("+psycopg", "")
+    conn_string = app.config["SQLALCHEMY_DATABASE_URI"].replace("+psycopg", "")
     conn = psycopg.connect(conn_string)
     with open_db(conn) as curs:
         curs.execute(
@@ -170,7 +167,7 @@ def copy(path, table: str):
     """
     Copy cleaned file to the database.
     """
-    conn_string = app.config['SQLALCHEMY_DATABASE_URI'].replace("+psycopg", "")
+    conn_string = app.config["SQLALCHEMY_DATABASE_URI"].replace("+psycopg", "")
     conn = psycopg.connect(conn_string)
 
     with open_db(conn) as curs:
@@ -185,7 +182,7 @@ def alter(prefix):
     """
     Copy cleaned file to the database.
     """
-    conn_string = app.config['SQLALCHEMY_DATABASE_URI'].replace("+psycopg", "")
+    conn_string = app.config["SQLALCHEMY_DATABASE_URI"].replace("+psycopg", "")
     conn = psycopg.connect(conn_string)
 
     if not prefix:
@@ -245,27 +242,26 @@ def copy_to_table(path, postfix, choose):
         file_basenames = choices
 
     files_to_copy = [
-        file
-        for file in os.scandir(path)
-        if os.path.basename(file) in file_basenames
+        file for file in os.scandir(path) if os.path.basename(file) in file_basenames
     ]
 
     from bklg.tasks.db.clean import clean_and_write
-    tasks=[]
+
+    tasks = []
     # import IPython; IPython.embed()
     for file in files_to_copy:
-        tasks.append( clean_and_write.s(file.path, postfix) )
+        tasks.append(clean_and_write.s(file.path, postfix))
     results = group(tasks).apply_async().get()
     click.echo("Finished cleaning files.")
 
-        # _csv = CleanCsv(os.path.abspath(file))
-        # _csv.replace_nul()
-        # click.echo(f"Copying {os.path.abspath(file)} to table {_csv.table}")
-        # conn_string = app.config['SQLALCHEMY_DATABASE_URI'].replace("+psycopg", "")
-        # conn = psycopg.connect(conn_string)
-        # _csv.copy_to_table(conn)
-        # _csv.del_no_nul()
-        # click.echo(
-        #     f"Copied {_csv.row_count-_csv.empty_pk} of {_csv.row_count} rows to {_csv.table}"
-        # )
-        # click.echo(f"There were {_csv.empty_pk} rows with no primary keys")
+    # _csv = CleanCsv(os.path.abspath(file))
+    # _csv.replace_nul()
+    # click.echo(f"Copying {os.path.abspath(file)} to table {_csv.table}")
+    # conn_string = app.config['SQLALCHEMY_DATABASE_URI'].replace("+psycopg", "")
+    # conn = psycopg.connect(conn_string)
+    # _csv.copy_to_table(conn)
+    # _csv.del_no_nul()
+    # click.echo(
+    #     f"Copied {_csv.row_count-_csv.empty_pk} of {_csv.row_count} rows to {_csv.table}"
+    # )
+    # click.echo(f"There were {_csv.empty_pk} rows with no primary keys")

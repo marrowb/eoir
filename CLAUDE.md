@@ -23,6 +23,11 @@ eoir-foia download fetch --no-unzip # Download without auto-extracting
 eoir-foia clean                     # CSV cleaning operations (placeholder)
 ```
 
+### Testing Commands
+```bash
+./run eoir --help  # Test out the CLI tool
+```
+
 ### Database Requirements
 - PostgreSQL database required
 - Correct credentials currently in .env file
@@ -133,5 +138,3 @@ def clean_and_write(file: str, postfix: str):
   * Potential Pitfall: We may need to add the `replace_nul` function if there are still nul-bytes
 * Step 2: Add back the header_length checks and the bad_values, do not modify the rows yet, let's just record the bad rows
 * Step 3: We'll reassess from there
-
-

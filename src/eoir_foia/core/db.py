@@ -19,6 +19,10 @@ def get_db_connection():
         if conn:
             conn.close()
 
+def get_connection():
+    """Get a direct database connection (caller responsible for closing)."""
+    return psycopg.connect(conninfo=DATABASE_URL)
+
 @contextmanager
 def get_admin_connection():
     """Get an admin connection to create database."""
@@ -103,3 +107,11 @@ def record_download_in_history(
                 VALUES (NOW(), %s, %s, %s, %s, %s)
             """, (content_length, last_modified, etag, local_path, status))
         conn.commit()
+
+def get_data_postfix() -> str:
+    """Get data postfix from latest download metadata (MM_YY format)."""
+    latest_download = get_latest_download()
+    if not latest_download:
+        raise ValueError("No download history found. Cannot determine date postfix.")
+    
+    return latest_download.last_modified.strftime("%m_%y")

@@ -1,7 +1,0 @@
-{
-    "IDNPRCDCHG": "integer",
-    "IDNCASE": "integer",
-    "IDNPROCEEDING": "integer",
-    "CHARGE": "tbllookupCharges.json",
-    "CHG_STATUS": "text"
-}

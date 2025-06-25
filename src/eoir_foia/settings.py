@@ -1,6 +1,8 @@
 """Application settings and configuration."""
+
 import os
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -24,3 +26,8 @@ LOG_DIR = Path("logs")
 EOIR_FOIA_URL = "https://fileshare.eoir.justice.gov/FOIA-TRAC-Report.zip"
 DOWNLOAD_DIR = Path("downloads")
 DOWNLOAD_DIR.mkdir(exist_ok=True)
+
+# JSON Configuration
+ROOT_DIR = os.path.realpath(os.path.join(os.path.dirname(__file__), "."))
+METADATA_DIR = os.path.join(ROOT_DIR, "metadata")
+JSON_DIR = os.path.join(METADATA_DIR, "json")

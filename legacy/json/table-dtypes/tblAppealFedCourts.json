@@ -1,6 +1,0 @@
-{
-    "idnAppealFedCourts": "integer",
-    "lngAppealID": "integer",
-    "datRequestedByOIL": "timestamp",
-    "strFedCourtDecision": "text"
-}
