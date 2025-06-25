@@ -1,0 +1,13 @@
+{
+    "IDNREPSASSIGNED": "integer",
+    "IDNCASE": "integer",
+    "STRATTYLEVEL": "tblAttyLevel.json",
+    "STRATTYTYPE": "tblAttyType.json",
+    "PARENT_TABLE": "tblParentTable.json",
+    "PARENT_IDN": "integer",
+    "BASE_CITY_CODE": "tblLookupBaseCity.json",
+    "INS_TA_DATE_ASSIGNED": "timestamp without time zone",
+    "E_27_DATE": "timestamp without time zone",
+    "E_28_DATE": "timestamp without time zone",
+    "BLNPRIMEATTY": "boolean"
+}
