@@ -692,4 +692,4 @@ create_tx_functions = {
     "reps": create_reps_table,
     "rider": create_rider_table,
     "threembr": create_threembr_table,
-}  # [ANKI]
+}

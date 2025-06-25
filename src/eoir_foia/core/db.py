@@ -4,7 +4,7 @@ import psycopg
 from datetime import datetime
 from typing import Optional
 from eoir_foia.settings import DATABASE_URL
-from eoir_foia.settings import ADMIN_URL
+from eoir_foia.settings import ADMIN_URL, pg_db
 from eoir_foia.core.models import FileMetadata
 from eoir_foia.core.db_utils import db_operation
 

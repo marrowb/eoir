@@ -1,0 +1,13 @@
+{
+    "ProceedingID": "proceeding_id",
+    "AdjDate": "adj_date",
+    "IJ_Code": "ij_code",
+    "IJ_Name": "ij",
+    "AdjTime": "adj_time",
+    "CalType": "cal_type",
+    "ScheduleType": "schedule_type",
+    "HearingLocationCode": "hloc",
+    "HearingLocationAddress": "h_address",
+    "ContactAddress": "contact",
+    "anum": "anum"
+}

@@ -1,0 +1,8 @@
+{
+    "IDNPROCEEDINGAPPLN": "integer",
+    "IDNPROCEEDING": "integer",
+    "IDNCASE": "integer",
+    "APPL_CODE": "text",
+    "APPL_RECD_DATE": "timestamp without time zone",
+    "APPL_DEC": "text"
+}
