@@ -118,8 +118,6 @@ def clean_single_file(csv_file: Path, postfix: str) -> Dict:
 
         print(f"Copying {os.path.abspath(csv_file)} to table {_csv.table}_{postfix}")
 
-        conn = get_connection()
-
         _csv.copy_to_table(postfix)
 
         rows_copied = _csv.row_count - _csv.empty_pk
