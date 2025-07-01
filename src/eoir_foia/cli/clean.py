@@ -1,225 +1,152 @@
 """CSV cleaning commands."""
-import click
+
+import json
 from pathlib import Path
+from typing import List, Optional
+
+import click
 import structlog
-from typing import Optional
 
 from eoir_foia.core.clean import (
     build_postfix,
-    get_download_dir, 
-    get_csv_files,
     clean_single_file,
-    copy_csv_to_table,
-    generate_validation_report
+    get_csv_files,
+    get_download_dir,
 )
-from eoir_foia.core.csv import CsvValidator
+from eoir_foia.settings import JSON_DIR
 
 logger = structlog.get_logger()
 
-@click.group()
-def clean():
-    """CSV cleaning operations."""
-    pass
 
-
-@clean.command()
-@click.argument('file_path', type=click.Path(exists=True))
-@click.option(
-    '--postfix', 
-    help='Table postfix (e.g., 06_25). If not provided, uses latest download date.'
-)
-def choose(file_path: str, postfix: Optional[str]):
-    """Clean a specific CSV file and write to database."""
+def _get_table_name(csv_filename: str) -> str:
+    """Map CSV filename to table name via tables.json."""
     try:
-        # Get postfix
-        if not postfix:
-            postfix = build_postfix()
-            click.echo(f"Using postfix from latest download: {postfix}")
-        
-        csv_file = Path(file_path)
-        click.echo(f"Processing: {csv_file.name}")
-        
-        # Setup progress bar
-        file_size = csv_file.stat().st_size
-        with click.progressbar(
-            length=file_size,
-            label=f'Cleaning {csv_file.name}',
-            fill_char='=',
-            empty_char='-'
-        ) as bar:
-            
-            # Process the file
-            result = clean_single_file(csv_file, postfix)
-            bar.update(file_size)  # Complete the progress bar
-        
-        # Display results
-        if result['success']:
-            click.echo(click.style("✅ SUCCESS", fg='green'))
-            click.echo(f"Table: {result['table_name']}")
-            click.echo(f"Rows processed: {result['rows_processed']:,}")
-            click.echo(f"Rows loaded: {result['rows_loaded']:,}")
-            click.echo(f"File size: {result['file_size_mb']:.1f} MB")
-            
-            if result['total_modifications'] > 0:
-                click.echo(click.style(f"⚠️  {result['total_modifications']} row modifications", fg='yellow'))
-            
-            if result['empty_primary_keys'] > 0:
-                click.echo(click.style(f"⚠️  {result['empty_primary_keys']} empty primary keys", fg='yellow'))
-                
-            if result['data_quality_issues'] > 0:
-                click.echo(click.style(f"⚠️  {result['data_quality_issues']} data quality issues", fg='yellow'))
-        else:
-            click.echo(click.style("❌ FAILED", fg='red'))
-            click.echo(f"Error: {result['error']}")
-            
-    except Exception as e:
-        logger.error("Clean choose failed", error=str(e))
-        raise click.ClickException(str(e))
+        with open(f"{JSON_DIR}/tables.json", "r") as f:
+            tables_map = json.load(f)
+        return tables_map.get(csv_filename, "unknown")
+    except FileNotFoundError:
+        return "unknown"
 
 
-@clean.command()
-@click.option(
-    '--path',
-    help='Directory containing CSV files. If not provided, uses latest download directory.'
-)
-@click.option(
-    '--postfix',
-    help='Table postfix (e.g., 06_25). If not provided, uses latest download date.'
-)
-def all(path: Optional[str], postfix: Optional[str]):
-    """Clean all CSV files in directory and write to database."""
+def _display_file_selection_menu(csv_files: List[Path], postfix: str) -> None:
+    """Show numbered menu of available CSV files."""
+    click.echo("\nAvailable CSV files:")
+    click.echo("0. [ALL FILES] - Process all CSV files")
+
+    for i, csv_file in enumerate(csv_files, 1):
+        table_name = _get_table_name(csv_file.name)
+        click.echo(f"{i}. {table_name}_{postfix} - {csv_file.name}")
+
+
+def _parse_selection(user_input: str, file_count: int) -> List[int]:
+    """Parse comma-separated file selections and validate range."""
     try:
-        # Get directory and postfix
+        selections = []
+        parts = [part.strip() for part in user_input.split(",")]
+
+        for part in parts:
+            num = int(part)
+            if num < 0 or num > file_count:
+                raise ValueError(f"Selection {num} is out of range (0-{file_count})")
+            selections.append(num)
+
+        return selections
+    except ValueError as e:
+        raise click.ClickException(f"Invalid selection: {e}")
+
+
+def _get_user_file_selection(csv_files: List[Path], postfix: str) -> List[Path]:
+    """Interactive file selection from menu."""
+    _display_file_selection_menu(csv_files, postfix)
+
+    user_input = click.prompt(
+        "\nEnter file numbers to process (comma-separated, 0 for all)", type=str
+    )
+
+    selections = _parse_selection(user_input, len(csv_files))
+
+    if 0 in selections:
+        return csv_files
+
+    return [csv_files[i - 1] for i in selections]
+
+
+@click.command()
+@click.option(
+    "--path",
+    help="Directory containing CSV files. If not provided, uses latest download directory.",
+)
+@click.option(
+    "--postfix",
+    help="Table postfix (e.g., 06_25). If not provided, uses latest download date.",
+)
+@click.option(
+    "--choose",
+    is_flag=True,
+    help="Display file selection menu instead of processing all files.",
+)
+def clean(path: Optional[str], postfix: Optional[str], choose: bool):
+    """Process CSV files and load to database with optional interactive selection."""
+    try:
         directory = get_download_dir(path)
         if not postfix:
             postfix = build_postfix()
             click.echo(f"Using postfix from latest download: {postfix}")
-        
+
         click.echo(f"Processing directory: {directory}")
-        
-        # Get CSV files
+
         csv_files = get_csv_files(directory)
         if not csv_files:
             raise click.ClickException(f"No CSV files found in {directory}")
-        
-        click.echo(f"Found {len(csv_files)} CSV files")
-        
-        # Process files with progress tracking
+
+        if choose:
+            files_to_process = _get_user_file_selection(csv_files, postfix)
+            if not files_to_process:
+                click.echo("No files selected.")
+                return
+        else:
+            files_to_process = csv_files
+
+        click.echo(f"\nProcessing {len(files_to_process)} CSV files")
+
         results = []
         total_rows_processed = 0
         total_rows_loaded = 0
-        
-        with click.progressbar(csv_files, label='Processing files') as files:
+
+        with click.progressbar(files_to_process, label="Processing files") as files:
             for csv_file in files:
                 result = clean_single_file(csv_file, postfix)
                 results.append(result)
-                total_rows_processed += result.get('rows_processed', 0)
-                total_rows_loaded += result.get('rows_loaded', 0)
-        
-        # Summary report
-        successful = len([r for r in results if r.get('success', False)])
+                total_rows_processed += result.get("rows_processed", 0)
+                total_rows_loaded += result.get("rows_loaded", 0)
+
+        successful = len([r for r in results if r.get("success", False)])
         failed = len(results) - successful
-        
-        click.echo("\n" + "="*60)
+
+        click.echo("\n" + "=" * 60)
         click.echo("BATCH PROCESSING SUMMARY")
-        click.echo("="*60)
-        click.echo(f"Files processed: {len(csv_files)}")
+        click.echo("=" * 60)
+        click.echo(f"Files processed: {len(files_to_process)}")
         click.echo(f"Successful: {successful}")
         if failed > 0:
-            click.echo(click.style(f"Failed: {failed}", fg='red'))
+            click.echo(click.style(f"Failed: {failed}", fg="red"))
         click.echo(f"Total rows processed: {total_rows_processed:,}")
         click.echo(f"Total rows loaded: {total_rows_loaded:,}")
-        
-        # Show individual file results
+
         click.echo(f"\nIndividual File Results:")
         for result in results:
-            file_name = Path(result['csv_file']).name
-            if result.get('success', False):
-                status = click.style("✅", fg='green')
+            file_name = Path(result["csv_file"]).name
+            if result.get("success", False):
+                status = click.style("✅", fg="green")
                 details = f"{result['rows_loaded']:,} rows"
+                if result.get("empty_primary_keys", 0) > 0:
+                    details += f" ({result['empty_primary_keys']:,} empty PKs)"
             else:
-                status = click.style("❌", fg='red') 
-                details = result.get('error', 'Unknown error')
-            
+                status = click.style("❌", fg="red")
+                details = result.get("error", "Unknown error")[:50]
+
             click.echo(f"  {status} {file_name:30s} {details}")
-            
-    except Exception as e:
-        logger.error("Clean all failed", error=str(e))
-        raise click.ClickException(str(e))
 
-
-@clean.command()
-@click.option(
-    '--path',
-    help='Directory containing Count.txt file. If not provided, uses latest download directory.'
-)
-@click.option(
-    '--postfix',
-    help='Table postfix (e.g., 06_25). If not provided, uses latest download date.'
-)
-def validate(path: Optional[str], postfix: Optional[str]):
-    """Validate loaded data against source file counts."""
-    try:
-        # Get directory and postfix
-        directory = get_download_dir(path)
-        if not postfix:
-            postfix = build_postfix()
-            click.echo(f"Using postfix from latest download: {postfix}")
-        
-        click.echo(f"Validating data in directory: {directory}")
-        click.echo(f"Using table postfix: {postfix}")
-        
-        # Generate validation report
-        with click.progressbar(label='Comparing counts', length=100) as bar:
-            report = generate_validation_report(directory, postfix)
-            bar.update(100)
-        
-        # Display validation results
-        click.echo("\n" + "="*60)
-        click.echo("VALIDATION REPORT")
-        click.echo("="*60)
-        
-        # Summary statistics
-        click.echo(f"Files compared: {report['files_compared']}")
-        click.echo(f"Perfect matches: {report['perfect_matches']}")
-        click.echo(f"Total expected rows: {report['total_expected']:,}")
-        click.echo(f"Total actual rows: {report['total_actual']:,}")
-        
-        total_diff = report['total_difference']
-        if total_diff == 0:
-            click.echo(click.style("✅ PERFECT MATCH", fg='green'))
-        else:
-            diff_pct = report['total_difference_pct']
-            status_color = 'yellow' if abs(diff_pct) < 5 else 'red'
-            click.echo(click.style(f"⚠️  Total difference: {total_diff:+,} ({diff_pct:+.2f}%)", fg=status_color))
-        
-        # Missing tables
-        if report['missing_tables']:
-            click.echo(click.style(f"\n❌ Missing tables: {len(report['missing_tables'])}", fg='red'))
-            for table in report['missing_tables']:
-                click.echo(f"  - {table}")
-        
-        # Detailed differences
-        click.echo(f"\nDetailed Results:")
-        click.echo(f"{'File':<30} {'Expected':<12} {'Actual':<12} {'Diff':<10} {'Status'}")
-        click.echo("-" * 75)
-        
-        for csv_file, details in report['differences'].items():
-            expected = details['expected']
-            actual = details['actual']
-            diff = details['difference']
-            status = details['status']
-            
-            # Color code the status
-            if status == 'match':
-                status_display = click.style("✅ Match", fg='green')
-            elif status == 'over':
-                status_display = click.style(f"⬆️  +{diff:,}", fg='yellow')
-            else:
-                status_display = click.style(f"⬇️  {diff:,}", fg='red')
-            
-            click.echo(f"{csv_file:<30} {expected:<12,} {actual:<12,} {diff:<+10,} {status_display}")
-            
     except Exception as e:
-        logger.error("Clean validate failed", error=str(e))
+        logger.error("Clean failed", error=str(e))
         raise click.ClickException(str(e))
