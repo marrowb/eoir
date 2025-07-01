@@ -9,9 +9,11 @@ import structlog
 
 from eoir_foia.core.clean import (
     build_postfix,
+    check_for_null_bytes,
     clean_single_file,
     get_csv_files,
     get_download_dir,
+    remove_null_bytes_subprocess,
 )
 from eoir_foia.settings import JSON_DIR
 
@@ -94,6 +96,12 @@ def clean(path: Optional[str], postfix: Optional[str], choose: bool):
             click.echo(f"Using postfix from latest download: {postfix}")
 
         click.echo(f"Processing directory: {directory}")
+
+        # Auto-detect and remove null bytes if needed
+        if check_for_null_bytes(directory):
+            click.echo("Detected null bytes in CSV files. Removing them now...")
+            remove_null_bytes_subprocess(directory)
+            click.echo("Null byte removal completed")
 
         csv_files = get_csv_files(directory)
         if not csv_files:
