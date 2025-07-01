@@ -1,222 +1,259 @@
-"""CSV processing operations."""
-
 import csv
 import json
 import os
 import re
-from dataclasses import dataclass
+import sys
+from contextlib import contextmanager
 from datetime import datetime, time
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
-from ..settings import JSON_DIR
+from eoir_foia.settings import JSON_DIR
 
 
-@dataclass
-class RowModification:
-    """Track modifications made to rows during cleaning"""
-
-    row_number: int
-    modification_type: str  # 'truncate', 'pad', 'clean_value'
-    column_affected: Optional[str]
-    original_value: str
-    new_value: str
-    reason: str
-
-
-# File-specific validation rules based on investigation findings
-FILE_SPECIFIC_RULES = {
-    "tbl_Court_Motions.csv": {
-        "auto_truncate": True,
-        "expected_extra_cols": 2,
-        "skip_validation_cols": [
-            # Only truly 100% null columns based on database analysis
-            "REJ",  # 100.00% null
-            "DATE_TO_BIA",  # 100.00% null
-            "DECISION_RENDERED",  # 100.00% null
-            "DATE_MAILED_TO_IJ",  # 100.00% null
-            "DATE_RECD_FROM_BIA",  # 100.00% null
-            "STRDJSCENARIO",  # 100.00% null
-            "E_28_RECPTFLAG",  # 100.00% null
-            # Note: Removed DATMOTIONDUE (93.99% null but 417K rows have data)
-            # Note: Removed STRCERTOFSERVICECODE (17.87% null but 5.7M rows have data)
-            # Note: Removed STRFILINGMETHOD (5.98% null but 6.5M rows have data)
-            # Note: Removed STRFILINGPARTY (3.89% null but 6.7M rows have data)
-        ],
-    },
-    "tblProBono.csv": {
-        "high_nul_tolerance": True,
-        "skip_validation_cols": [
-            "WD_DEC",
-            "strA1",
-            "strA2",
-            "strA3",
-            "strPossibility",
-            "strIntrprLang",
-            "blnProcessed",
-            "other_comp",
-            "DEC_212C",
-            "recd_212C",
-            "blnOARequestedbyINS",
-            "Other_dec2",
-            "Charge_5",
-            "blnOARequestedbyAlien",
-            "DEC_245",
-            "recd_245",
-            "Charge_4",
-            "blnIntrpr",
-            "Charge_6",
-            "WD_recd",
-            "blnOARequestedbyAmicus",
-        ],
-    },
-    "A_TblCase.csv": {
-        "skip_validation_cols": [
-            # These are confirmed to be 99.94% to 100% null (legacy/unused fields)
-            "UP_BOND_DATE",  # 100.00% null
-            "UP_BOND_RSN",  # 100.00% null
-            "ZBOND_MRG_FLAG",  # 99.95% null
-            "DETENTION_DATE",  # 100.00% null
-            "DETENTION_LOCATION",  # 99.99% null
-            "DCO_LOCATION",  # 99.99% null
-            "DETENTION_FACILITY_TYPE",  # 100.00% null
-            "LPR",  # 99.94% null
-        ]
-    },
-}
+@contextmanager
+def get_reader_writer(file, rw: str):
+    """CSV reader/writer context manager with latin-1 encoding."""
+    try:
+        if rw == "r":
+            with open(file, "r", newline="", encoding="latin-1", errors="replace") as f:
+                reader = csv.reader(
+                    f,
+                    delimiter="\t",
+                    dialect="excel-tab",
+                    quoting=csv.QUOTE_NONE,
+                    escapechar="\\",
+                )
+                yield reader
+        elif rw == "w":
+            with open(file, "a", newline="", encoding="latin-1", errors="replace") as f:
+                writer = csv.writer(
+                    f,
+                    delimiter="\t",
+                    dialect="excel-tab",
+                    quoting=csv.QUOTE_NONE,
+                    escapechar="\\",
+                )
+                yield writer
+    except csv.Error as e:
+        sys.exit(f"file, line {reader.line_num}, {e}")
 
 
-class CsvValidator:
+class CleanCsv:
     def __init__(self, csvfile) -> None:
         """
-        Initialize CsvValidator with file paths and configuration.
-        Enhanced for Step 2 with validation and tracking.
+        Set variables with filepaths
         """
         self.csvfile = csvfile
         self.header = self.get_header()
         self.header_length = len(self.header)
         self.name = os.path.basename(self.csvfile)
+        self.js_name = f"{JSON_DIR}/table-dtypes/{self.name.replace('.csv', '.json')}"
         self.no_nul = os.path.abspath(self.csvfile).replace(".csv", "_no_nul.csv")
-
-        # Step 1 counters
+        self.bad_row = os.path.abspath(self.csvfile).replace(
+            ".csv", "_br.csv"
+        )  # [DEBUG]
+        self.cleaned = os.path.abspath(self.csvfile).replace(
+            ".csv", "_cleaned.csv"
+        )  # [DEBUG]
         self.row_count = 0
+        self.bad_count = 0
         self.empty_pk = 0
-
-        # Step 2 enhancements
-        self.bad_rows = []  # Track problematic rows
-        self.modifications = []  # Track all changes made
-        self.column_stats = {}  # Per-column quality metrics
-        self.validation_rules = {}  # File-specific rules
-        self.empty_primary_keys = []  # Track rows with empty primary keys
-
-        # Primary key information
-        self.primary_key_column = self.header[0] if self.header else None
-
-        # Load table configuration
         try:
-            with open(os.path.join(JSON_DIR, "tables.json"), "r") as f:
+            with open(f"{JSON_DIR}/tables.json", "r") as f:
                 self.table = json.load(f)[self.name]
             with open(
-                os.path.join(
-                    JSON_DIR, "table-dtypes", f"{self.name.replace('.csv', '.json')}"
-                ),
+                f"{JSON_DIR}/table-dtypes/{os.path.basename(self.js_name)}",
                 "r",
             ) as f:
                 self.dtypes = json.load(f)
         except FileNotFoundError as e:
             print(f"Need to setup json file for table. {e}")
-            self.table = None
-            self.dtypes = {}
 
-        # Load file-specific validation rules
-        self.validation_rules = FILE_SPECIFIC_RULES.get(self.name, {})
-
-    def get_header(self) -> list:
-        """
-        Return first line of csv file.
-        """
-        with open(
-            self.csvfile, "r", newline="", encoding="latin-1", errors="replace"
-        ) as f:
-            reader = csv.reader(
-                f,
-                delimiter="\t",
-                quoting=csv.QUOTE_NONE,
-                escapechar="\\",
+    def copy_to_table(self, connection, postfix, table="") -> None:
+        """Copy processed CSV data to PostgreSQL using COPY command."""
+        with open_db(connection) as curs:
+            if not table:
+                table = self.table + "_" + postfix
+            curs.execute("""SET session_replication_role = replica;""")
+            copy_statement = (
+                f"COPY {table} FROM STDIN WITH (FORMAT TEXT, DELIMITER '|', NULL '\\N')"
             )
-            return next(reader)
 
-    def validate_and_process_rows(self, skip_header=True) -> list:
-        """
-        Enhanced CSV generator with Step 2 validation and tracking.
-        Intelligently handles row length issues and tracks bad values.
-        """
-        # Use no_nul file if it exists, otherwise use original
-        file_to_read = self.no_nul if os.path.exists(self.no_nul) else self.csvfile
+            with curs.copy(copy_statement) as copy:
+                for row in self.csv_gen_pk():
+                    copy.write(row)
 
+            curs.execute("""SET session_replication_role = DEFAULT;""")
+
+    def replace_nul(self) -> None:
+        """Remove null bytes from CSV file to prevent processing errors."""
+        fi = open(self.csvfile, "rb")
+        data = fi.read()
+        fi.close()
+        fo = open(self.no_nul, "wb")
+        fo.write(data.replace(b"\x00", b""))
+        fo.close()
+
+    def del_no_nul(self) -> None:
+        """Clean up temporary file after processing."""
+        os.remove(self.no_nul)
+
+    def csv_gen_pk(self) -> iter:
+        """Filter out rows with empty primary keys before database copy."""
+        for i, row in enumerate(self.csv_gen()):
+            if row.split("|")[0] == "\\N":
+                self.empty_pk += 1
+                continue
+            else:
+                yield row
+
+    def csv_gen(self, skip_header=True) -> list:
+        """Main CSV processing generator that handles row length mismatches and data cleaning."""
         with open(
-            file_to_read, "r", newline="", encoding="latin-1", errors="replace"
+            self.no_nul, "r", newline="", encoding="latin-1", errors="replace"
         ) as f:
             for i, row in enumerate(
                 csv.reader(f, delimiter="\t", quoting=csv.QUOTE_NONE)
             ):
-                if not row:
+                try:
+                    if not row:
+                        continue
+                    elif self.is_nul_like(row[0]):
+                        self.empty_pk += 1
+                        continue
+                    elif i == 0 and skip_header:
+                        continue  # skip header row
+                    elif i == 0 and not skip_header:
+                        yield "|".join(self.header) + "\n"
+                    elif len(row) == self.header_length:
+                        yield self.clean_row(row)
+                    elif len(row) > self.header_length:
+                        _bad_vals = self.get_bad_values(row)
+                        if _bad_vals:
+                            copy = self.shift_values(row)
+                            if not copy or not self.get_bad_values(copy):
+                                yield self.clean_row(self.remove_extra_cols(copy))
+                        elif not _bad_vals:
+                            clean_extra = self.remove_extra_cols(row)
+                            if clean_extra:
+                                yield self.clean_row(clean_extra)
+                        else:
+                            continue
+                    elif len(row) < self.header_length:
+                        yield self.clean_row(self.add_extra_cols(row))
+                except (AttributeError, IndexError, TypeError) as e:
+                    print(e)
+                    # DEBUG: Uncomment for interactive debugging
+                    # import IPython; IPython.embed()
                     continue
-                elif i == 0 and skip_header:
+            else:
+                self.row_count = i
+
+    def get_bad_rows(self) -> list:
+        """Debug utility: extract rows with more columns than header for inspection."""
+        bad_rows = []
+        with open(
+            self.no_nul, "r", newline="", encoding="latin-1", errors="replace"
+        ) as f:
+            for i, row in enumerate(
+                csv.reader(f, delimiter="\t", quoting=csv.QUOTE_NONE)
+            ):
+                if i == 0:
                     continue  # skip header row
-
-                # Step 2: Enhanced processing
-                row_number = i if skip_header else i + 1
-
-                # 1. Validate primary key first
-                pk_issue = self.validate_primary_key(row, row_number)
-                if pk_issue:
-                    self.empty_primary_keys.append(row_number)
-                    self.empty_pk += 1
-                    self.record_modification(pk_issue)
-                    # Continue processing but flag the issue
-
-                # 2. Handle variable length rows
-                corrected_row, length_modifications = self.correct_row_length(
-                    row, row_number
+                elif len(row) > self.header_length:
+                    bad_rows.append(row)
+                    self.bad_count += 1
+            else:
+                print(
+                    f"Writing {self.bad_count} bad rows, of {i} rows to {self.bad_row}"
                 )
 
-                # 3. Detect bad values (but don't fix yet - that's Step 3)
-                bad_values = self.detect_data_quality_issues(corrected_row)
+        with get_reader_writer(self.bad_row, "w") as w:
+            for row in bad_rows:
+                w.writerow(row)
 
-                # 4. Track issues if any found
-                all_modifications = length_modifications.copy()
-                if pk_issue:
-                    all_modifications.append(pk_issue)
+    def clean_row(self, row) -> str:
+        """Validate and clean row values according to column data types."""
+        for i, value in enumerate(row):
+            dtype = list(self.dtypes.values())[i]
+            value = value.strip("\\").strip()
+            if self.is_nul_like(value):
+                row[i] = r"\N"
+                continue
+            elif dtype == "timestamp without time zone":
+                row[i] = self.convert_timestamp(value)
+                continue
+            elif dtype == "time without time zone":
+                row[i] = self.convert_time(value)
+                continue
+            elif dtype == "integer":
+                row[i] = self.convert_integer(value)
+                continue
+            else:
+                row[i] = value.replace("|", "")
+        return "|".join(row) + "\n"
 
-                if bad_values or all_modifications:
-                    self.bad_rows.append(
-                        {
-                            "row_number": row_number,
-                            "original_row": row.copy(),
-                            "corrected_row": corrected_row.copy(),
-                            "bad_values": bad_values,
-                            "modifications": all_modifications,
-                            "has_empty_pk": pk_issue is not None,
-                        }
-                    )
+    def get_bad_values(self, row) -> list[(int, str)]:
+        """Identify values that don't match expected data types for row realignment."""
+        bad_values = []
+        codes = self.get_codes()
+        for i, value in enumerate(row):
+            try:
+                dtype = list(self.dtypes.values())[i]
+                value = value.strip("\\").strip()
+                if self.is_nul_like(value):
+                    continue
+                elif dtype[0] == "^":  # dtype is a regex
+                    if not re.match(dtype, value):
+                        bad_values.append((i, value))
+                elif dtype.endswith(".json"):
+                    if value not in codes[dtype].keys():  # see if value is in lookups
+                        bad_values.append((i, value))
+                elif dtype == "timestamp without time zone":
+                    if self.convert_timestamp(value) == r"\N":
+                        bad_values.append((i, value))
+                elif dtype == "time without time zone":
+                    if self.convert_time(value) == r"\N":
+                        bad_values.append((i, value))
+                elif dtype == "integer":
+                    if self.convert_integer(value) == r"\N":
+                        bad_values.append((i, value))
+                else:
+                    continue
+            except IndexError:
+                # import IPython; IPython.embed()
+                return bad_values
 
-                    # Add modifications to global tracking
-                    for mod in length_modifications:
-                        self.record_modification(mod)
+    def shift_values(self, row):
+        """Attempt to fix misaligned row values by removing null-like entries."""
+        bad_vals = self.get_bad_values(row)
+        for bv in bad_vals:
+            row_copy = row[:]  # deep copy of row
+            ix = bv[0]
+            for i in range(ix, 0, -1):
+                if self.is_nul_like(row[i]):
+                    row_copy.pop(i)
+                if not self.get_bad_values(row_copy):
+                    return row_copy
+                else:
+                    pass
 
-                # 5. Clean data types and yield corrected row
-                cleaned_row = self.clean_row(corrected_row, row_number)
-                yield cleaned_row
+    def remove_extra_cols(self, row) -> list:
+        """Remove extra columns if they're all null-like, otherwise return None."""
+        extra_cols = row[self.header_length :]
+        for value in extra_cols:
+            if not self.is_nul_like(value):
+                return None
+        return row[: self.header_length]
 
-        self.row_count = i
+    def add_extra_cols(self, row) -> list:
+        """Pad short rows with empty values to match header length."""
+        for i in range(self.header_length - len(row)):
+            row.append("")
+        return row
 
     @staticmethod
     def is_nul_like(value: str) -> bool:
-        """
-        Test if value should be converted to Nul
-        Removes values which don't convey any meaning.
-        """
+        """Check if value should be treated as NULL in database."""
         nul_like = set(["", "b6", "N/A", "A.2.a"])
         if value in nul_like:
             return True
@@ -229,288 +266,9 @@ class CsvValidator:
         else:
             return False
 
-    def replace_nul(self) -> None:
-        """
-        replace nul bytes in csv file. Write to self.no_nul
-        """
-        fi = open(self.csvfile, "rb")
-        data = fi.read()
-        fi.close()
-        fo = open(self.no_nul, "wb")
-        fo.write(data.replace(b"\x00", b""))
-        fo.close()
-
-    def del_no_nul(self) -> None:
-        """
-        Delete the no_nul file
-        """
-        if os.path.exists(self.no_nul):
-            os.remove(self.no_nul)
-
-    def _create_row_modification(
-        self,
-        row_number: int,
-        mod_type: str,
-        column: Optional[str],
-        old_val: str,
-        new_val: str,
-        reason: str,
-    ) -> RowModification:
-        """
-        Helper method to create RowModification objects consistently.
-        Reduces code duplication in validation methods.
-        """
-        return RowModification(
-            row_number=row_number,
-            modification_type=mod_type,
-            column_affected=column,
-            original_value=old_val,
-            new_value=new_val,
-            reason=reason,
-        )
-
-    def correct_row_length(
-        self, row: List[str], row_number: int
-    ) -> Tuple[List[str], List[RowModification]]:
-        """
-        Intelligently handle rows with incorrect length.
-        Returns corrected row and list of modifications made.
-        """
-        modifications = []
-        corrected_row = row.copy()
-
-        if len(row) == self.header_length:
-            return corrected_row, modifications
-
-        # Handle long rows (too many columns)
-        if len(row) > self.header_length:
-            # Check if file has auto-truncation rules
-            if self.validation_rules.get("auto_truncate", False):
-                expected_extra = self.validation_rules.get("expected_extra_cols", 0)
-
-                if len(row) == self.header_length + expected_extra:
-                    # Check if extra columns are empty (like tbl_Court_Motions)
-                    extra_cols = row[self.header_length :]
-                    if all(self.is_nul_like(col) for col in extra_cols):
-                        corrected_row = row[: self.header_length]
-                        modifications.append(
-                            self._create_row_modification(
-                                row_number,
-                                "truncate",
-                                None,
-                                f"Length {len(row)}",
-                                f"Length {len(corrected_row)}",
-                                f"Auto-truncated {expected_extra} empty trailing columns",
-                            )
-                        )
-                    else:
-                        # Extra columns have data - flag as problematic
-                        modifications.append(
-                            self._create_row_modification(
-                                row_number,
-                                "flag_long_row",
-                                None,
-                                f"Length {len(row)}",
-                                f"Length {len(row)}",
-                                f"Row has {len(row) - self.header_length} extra columns with data",
-                            )
-                        )
-                else:
-                    # Unexpected length
-                    modifications.append(
-                        self._create_row_modification(
-                            row_number,
-                            "flag_unexpected_length",
-                            None,
-                            f"Length {len(row)}",
-                            f"Length {len(row)}",
-                            f"Unexpected row length: expected {self.header_length} + {expected_extra}, got {len(row)}",
-                        )
-                    )
-            else:
-                # No auto-truncation rule - flag as problematic
-                modifications.append(
-                    self._create_row_modification(
-                        row_number,
-                        "flag_long_row",
-                        None,
-                        f"Length {len(row)}",
-                        f"Length {len(row)}",
-                        f"Row too long: expected {self.header_length}, got {len(row)}",
-                    )
-                )
-
-        # Handle short rows (too few columns)
-        elif len(row) < self.header_length:
-            # Pad with empty values
-            missing_cols = self.header_length - len(row)
-            corrected_row.extend([""] * missing_cols)
-            modifications.append(
-                self._create_row_modification(
-                    row_number,
-                    "pad",
-                    None,
-                    f"Length {len(row)}",
-                    f"Length {len(corrected_row)}",
-                    f"Padded {missing_cols} missing columns with empty values",
-                )
-            )
-
-        return corrected_row, modifications
-
-    def validate_primary_key(
-        self, row: List[str], row_number: int
-    ) -> Optional[RowModification]:
-        """
-        Validate that the primary key (first column) is not empty or null-like.
-        Returns RowModification if primary key is invalid, None otherwise.
-        """
-        if not row:
-            return self._create_row_modification(
-                row_number,
-                "empty_primary_key",
-                self.primary_key_column,
-                "[EMPTY ROW]",
-                "INVALID",
-                "Row is completely empty",
-            )
-
-        primary_key_value = row[0] if len(row) > 0 else ""
-
-        if self.is_nul_like(primary_key_value):
-            return self._create_row_modification(
-                row_number,
-                "empty_primary_key",
-                self.primary_key_column,
-                primary_key_value,
-                "INVALID",
-                "Primary key cannot be empty or null-like",
-            )
-
-        return None
-
-    def detect_data_quality_issues(self, row: List[str]) -> List[Tuple[int, str, str]]:
-        """
-        Enhanced bad value detection that respects file-specific rules.
-        Returns list of (column_index, value, reason) tuples.
-        """
-        bad_values = []
-
-        if not self.dtypes:
-            return bad_values
-
-        # Get columns to skip validation for this file
-        skip_cols = set(self.validation_rules.get("skip_validation_cols", []))
-
-        for i, value in enumerate(row):
-            if i >= len(self.header):
-                break
-
-            col_name = self.header[i]
-
-            # Skip validation for known empty/legacy columns
-            if col_name in skip_cols:
-                continue
-
-            # Skip validation for nul-like values in high-nul-tolerance files
-            if self.validation_rules.get(
-                "high_nul_tolerance", False
-            ) and self.is_nul_like(value):
-                continue
-
-            # Get expected data type
-            if col_name not in self.dtypes:
-                continue
-
-            dtype = self.dtypes[col_name]
-            value = value.strip("\\").strip()
-
-            if self.is_nul_like(value):
-                continue  # Nul-like values are generally acceptable
-
-            # Validate based on data type
-            if dtype == "timestamp without time zone":
-                if self.convert_timestamp(value) == r"\N":
-                    bad_values.append((i, value, f"Invalid timestamp format"))
-            elif dtype == "time without time zone":
-                if self.convert_time(value) == r"\N":
-                    bad_values.append((i, value, f"Invalid time format"))
-            elif dtype == "integer":
-                if self.convert_integer(value) == r"\N":
-                    bad_values.append((i, value, f"Invalid integer format"))
-            elif dtype.startswith("^"):  # Regex pattern
-                if not re.match(dtype, value):
-                    bad_values.append((i, value, f"Does not match pattern {dtype}"))
-            elif dtype.endswith(".json"):  # Lookup table reference
-                # Note: Full lookup validation would require loading lookup tables
-                # For now, we'll skip this to avoid performance impact
-                pass
-
-        return bad_values
-
-    def record_modification(self, modification: RowModification) -> None:
-        """
-        Add a modification to the tracking list.
-        """
-        self.modifications.append(modification)
-
-    def generate_quality_report(self) -> Dict:
-        """
-        Generate comprehensive quality metrics report.
-        """
-        if not self.bad_rows:
-            return {
-                "total_rows": self.row_count,
-                "structural_issues": 0,
-                "data_quality_issues": 0,
-                "modifications_summary": {},
-                "recommendations": [],
-            }
-
-        structural_issues = len([r for r in self.bad_rows if r.get("modifications")])
-        data_quality_issues = len([r for r in self.bad_rows if r.get("bad_values")])
-
-        # Summarize modification types
-        mod_summary = {}
-        for mod in self.modifications:
-            mod_type = mod.modification_type
-            mod_summary[mod_type] = mod_summary.get(mod_type, 0) + 1
-
-        # Generate recommendations
-        recommendations = []
-        if structural_issues > 0:
-            recommendations.append(
-                f"Review {structural_issues} rows with structural issues"
-            )
-        if data_quality_issues > 0:
-            recommendations.append(
-                f"Review {data_quality_issues} rows with data quality issues"
-            )
-
-        return {
-            "total_rows": self.row_count,
-            "structural_issues": structural_issues,
-            "data_quality_issues": data_quality_issues,
-            "modifications_summary": mod_summary,
-            "recommendations": recommendations,
-        }
-
-    def random_sample_bad_rows(self, sample_size: int = 100) -> List[Dict]:
-        """
-        Extract random sample of problematic rows for manual inspection.
-        """
-        import random
-
-        if len(self.bad_rows) <= sample_size:
-            return self.bad_rows
-
-        return random.sample(self.bad_rows, sample_size)
-
     @staticmethod
     def convert_integer(value: str) -> str:
-        """
-        Test if value is convertible to an integer, if not return null
-        """
+        """Convert value to integer or return \\N if invalid."""
         try:
             value = value.replace("O", "0")
             int(value)
@@ -520,9 +278,7 @@ class CsvValidator:
 
     @staticmethod
     def convert_timestamp(value: str) -> str:
-        """
-        Test if value is convertible to an timestamp, if not return null
-        """
+        """Convert value to timestamp or return \\N if invalid."""
         try:
             datetime.fromisoformat(value)
             return value
@@ -531,9 +287,7 @@ class CsvValidator:
 
     @staticmethod
     def convert_time(value: str) -> str:
-        """
-        Test if value is convertible to a time, if not return null
-        """
+        """Convert value to time or return \\N if invalid."""
         try:
             if len(value) == 4 and ":" in value:
                 value = "0" + value
@@ -543,109 +297,56 @@ class CsvValidator:
         except ValueError:
             return r"\N"
 
-    def clean_row(self, row: List[str], row_number: int) -> List[str]:
-        """
-        Apply data type conversions to row values, converting invalid values to \\N.
-        Records modifications for tracking. Based on legacy clean_row() logic.
-        """
-        if not self.dtypes:
-            # No dtype information available, return row with pipe characters removed
-            return [str(cell).replace("|", "") for cell in row]
-        
-        cleaned_row = row.copy()
-        
-        for i, value in enumerate(cleaned_row):
-            if i >= len(self.header):
-                break  # Skip extra columns beyond header length
-                
-            col_name = self.header[i]
-            if col_name not in self.dtypes:
-                # No dtype info for this column, just remove pipe characters
-                cleaned_row[i] = str(value).replace("|", "")
-                continue
-                
-            dtype = self.dtypes[col_name]
-            original_value = value
-            value = str(value).strip("\\").strip()
-            
-            # Handle null-like values first
-            if self.is_nul_like(value):
-                cleaned_row[i] = r"\N"
-                if original_value != r"\N":
-                    self.record_modification(
-                        self._create_row_modification(
-                            row_number, "convert_to_null", col_name,
-                            original_value, r"\N", "Converted null-like value"
-                        )
-                    )
-                continue
-            
-            # Apply type-specific conversions
-            if dtype == "timestamp without time zone":
-                converted = self.convert_timestamp(value)
-                cleaned_row[i] = converted
-                if converted == r"\N" and original_value != r"\N":
-                    self.record_modification(
-                        self._create_row_modification(
-                            row_number, "convert_to_null", col_name,
-                            original_value, r"\N", "Invalid timestamp format"
-                        )
-                    )
-            elif dtype == "time without time zone":
-                converted = self.convert_time(value)
-                cleaned_row[i] = converted
-                if converted == r"\N" and original_value != r"\N":
-                    self.record_modification(
-                        self._create_row_modification(
-                            row_number, "convert_to_null", col_name,
-                            original_value, r"\N", "Invalid time format"
-                        )
-                    )
-            elif dtype == "integer":
-                converted = self.convert_integer(value)
-                cleaned_row[i] = converted
-                if converted == r"\N" and original_value != r"\N":
-                    self.record_modification(
-                        self._create_row_modification(
-                            row_number, "convert_to_null", col_name,
-                            original_value, r"\N", "Invalid integer format"
-                        )
-                    )
-            else:
-                # For other data types, just remove pipe characters
-                cleaned_row[i] = value.replace("|", "")
-        
-        return cleaned_row
+    def get_bad_line(self, lineno="") -> list:
+        """Debug utility: get specific row by line number for error analysis."""
+        with open(
+            self.no_nul, "r", newline="", encoding="latin-1", errors="replace"
+        ) as f:
+            for i, row in enumerate(
+                csv.reader(f, delimiter="\t", quoting=csv.QUOTE_NONE)
+            ):
+                if i == lineno:
+                    return row
 
+    def get_bad_row(self, value: str, column: str) -> list:
+        """Debug utility: find rows containing specific value in given column."""
+        _bad_rows = []
+        index = list(self.dtypes.keys()).index(column)
+        with open(
+            self.no_nul, "r", newline="", encoding="latin-1", errors="replace"
+        ) as f:
+            for i, row in enumerate(
+                csv.reader(f, delimiter="\t", quoting=csv.QUOTE_NONE)
+            ):
+                try:
+                    if row[index] == value:
+                        print(f"Bad value located in row {i}: {row}")
+                        _bad_rows.append(row)
+                except IndexError:
+                    continue
+                    # As of now short rows will throw an index error.
+        return _bad_rows
 
-def dump_counts(count_file_path: str) -> Dict[str, int]:
-    """
-    Parse Count.txt file and return row counts for each table.
+    def get_codes(self) -> dict:
+        """Load lookup code mappings from JSON files for data validation."""
+        json_files = [file for file in self.dtypes.values() if file.endswith(".json")]
+        json_dicts = []
+        for file in json_files:
+            with open(f"{JSON_DIR}/lookups/{file}", "r") as f:
+                json_dicts.append(json.load(f))
+        return dict(zip(json_files, json_dicts))
 
-    Args:
-        count_file_path: Path to Count.txt file
+    def generate_table_type_file(self) -> None:
+        """Generate JSON file mapping CSV headers to data types for validation."""
+        with open(self.js_name, "w", encoding="utf-8") as f:
+            json.dump(
+                dict(zip(self.header, [""] * self.header_length)),
+                f,
+                ensure_ascii=False,
+                indent=4,
+            )
 
-    Returns:
-        Dictionary mapping table names to row counts
-    """
-    table_counts = {}
-
-    with open(count_file_path, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("TableName"):
-                continue
-
-            # Parse lines like "A_TblCase	8608373 rows copied."
-            parts = line.split("\t")
-            if len(parts) >= 2:
-                table_name = parts[0]
-                count_text = parts[1]
-
-                # Extract number from "8608373 rows copied."
-                match = re.search(r"(\d+)\s+rows\s+copied", count_text)
-                if match:
-                    row_count = int(match.group(1))
-                    table_counts[table_name] = row_count
-
-    return table_counts
+    def get_header(self) -> list:
+        """Extract header row from CSV file."""
+        with get_reader_writer(self.csvfile, "r") as r:
+            return next(r)
