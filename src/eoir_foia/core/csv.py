@@ -6,7 +6,7 @@ import sys
 from contextlib import contextmanager
 from datetime import datetime, time
 
-from eoir_foia.core.db import get_connection
+from eoir_foia.core.db import get_db_connection
 from eoir_foia.settings import JSON_DIR
 
 
@@ -68,9 +68,9 @@ class CleanCsv:
         except FileNotFoundError as e:
             print(f"Need to setup json file for table. {e}")
 
-    def copy_to_table(self, connection, postfix, table="") -> None:
+    def copy_to_table(self, postfix, table="") -> None:
         """Copy processed CSV data to PostgreSQL using COPY command."""
-        with connection.cursor() as curs:
+        with get_db_connection() as curs:
             if not table:
                 table = self.table + "_" + postfix
             curs.execute("""SET session_replication_role = replica;""")
@@ -83,7 +83,6 @@ class CleanCsv:
                     copy.write(row)
 
             curs.execute("""SET session_replication_role = DEFAULT;""")
-        connection.commit()
 
     def csv_gen_pk(self) -> iter:
         """Filter out rows with empty primary keys before database copy."""

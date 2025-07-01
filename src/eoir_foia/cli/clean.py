@@ -1,6 +1,7 @@
 """CSV cleaning commands."""
 
 import json
+import multiprocessing as mp
 from pathlib import Path
 from typing import List, Optional
 
@@ -87,7 +88,23 @@ def _get_user_file_selection(csv_files: List[Path], postfix: str) -> List[Path]:
     is_flag=True,
     help="Display file selection menu instead of processing all files.",
 )
-def clean(path: Optional[str], postfix: Optional[str], choose: bool):
+@click.option(
+    "--parallel",
+    is_flag=True,
+    help="Process files in parallel for faster execution.",
+)
+@click.option(
+    "--workers",
+    type=int,
+    help="Number of parallel workers (default: CPU count - 1, max 8).",
+)
+def clean(
+    path: Optional[str],
+    postfix: Optional[str],
+    choose: bool,
+    parallel: bool,
+    workers: Optional[int],
+):
     """Process CSV files and load to database with optional interactive selection."""
     try:
         directory = get_download_dir(path)
@@ -117,16 +134,27 @@ def clean(path: Optional[str], postfix: Optional[str], choose: bool):
 
         click.echo(f"\nProcessing {len(files_to_process)} CSV files")
 
-        results = []
-        total_rows_processed = 0
-        total_rows_loaded = 0
+        if parallel:
+            from eoir_foia.core.parallel import clean_files_parallel
 
-        with click.progressbar(files_to_process, label="Processing files") as files:
-            for csv_file in files:
-                result = clean_single_file(csv_file, postfix)
-                results.append(result)
-                total_rows_processed += result.get("rows_processed", 0)
-                total_rows_loaded += result.get("rows_loaded", 0)
+            worker_count = workers or min(mp.cpu_count() - 1, 8)
+            click.echo(f"Using parallel processing with {worker_count} workers")
+
+            results = clean_files_parallel(files_to_process, postfix, workers)
+
+            total_rows_processed = sum(r.get("rows_processed", 0) for r in results)
+            total_rows_loaded = sum(r.get("rows_loaded", 0) for r in results)
+        else:
+            results = []
+            total_rows_processed = 0
+            total_rows_loaded = 0
+
+            with click.progressbar(files_to_process, label="Processing files") as files:
+                for csv_file in files:
+                    result = clean_single_file(csv_file, postfix)
+                    results.append(result)
+                    total_rows_processed += result.get("rows_processed", 0)
+                    total_rows_loaded += result.get("rows_loaded", 0)
 
         successful = len([r for r in results if r.get("success", False)])
         failed = len(results) - successful

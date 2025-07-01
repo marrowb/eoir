@@ -80,15 +80,15 @@ def check_for_null_bytes(directory: Path) -> bool:
     csv_files = list(directory.glob("*.csv"))
     if not csv_files:
         return False
-    
+
     # Check first available CSV file
     sample_file = csv_files[0]
     chunk_size = 1024 * 1024  # 1MB chunks
-    
+
     try:
-        with open(sample_file, 'rb') as f:
+        with open(sample_file, "rb") as f:
             while chunk := f.read(chunk_size):
-                if b'\x00' in chunk:
+                if b"\x00" in chunk:
                     logger.info(f"Found null bytes in {sample_file.name}")
                     return True
         return False
@@ -100,14 +100,14 @@ def check_for_null_bytes(directory: Path) -> bool:
 def remove_null_bytes_subprocess(directory: Path, parallel_workers: int = 6) -> None:
     """Remove null bytes from all CSV files using Perl subprocess."""
     logger.info(f"Removing null bytes from CSV files in {directory}")
-    
+
     cmd = f'find "{directory}" -name "*.csv" -type f | xargs -n 1 -P {parallel_workers} perl -pi -e "s/\\0//g"'
-    
+
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-    
+
     if result.returncode != 0:
         raise Exception(f"Null byte removal failed: {result.stderr}")
-        
+
     logger.info("Successfully removed null bytes from all CSV files")
 
 
@@ -120,7 +120,7 @@ def clean_single_file(csv_file: Path, postfix: str) -> Dict:
 
         conn = get_connection()
 
-        _csv.copy_to_table(conn, postfix)
+        _csv.copy_to_table(postfix)
 
         rows_copied = _csv.row_count - _csv.empty_pk
         print(
@@ -149,4 +149,3 @@ def clean_single_file(csv_file: Path, postfix: str) -> Dict:
             "rows_loaded": 0,
             "empty_primary_keys": 0,
         }
-
