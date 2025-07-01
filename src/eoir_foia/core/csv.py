@@ -6,6 +6,7 @@ import sys
 from contextlib import contextmanager
 from datetime import datetime, time
 
+from eoir_foia.core.db import get_connection
 from eoir_foia.settings import JSON_DIR
 
 
@@ -70,7 +71,7 @@ class CleanCsv:
 
     def copy_to_table(self, connection, postfix, table="") -> None:
         """Copy processed CSV data to PostgreSQL using COPY command."""
-        with open_db(connection) as curs:
+        with get_connection() as curs:
             if not table:
                 table = self.table + "_" + postfix
             curs.execute("""SET session_replication_role = replica;""")
