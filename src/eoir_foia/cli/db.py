@@ -8,9 +8,12 @@ import click
 import structlog
 
 from eoir_foia.core.clean import build_postfix
-from eoir_foia.core.db import create_database, get_connection, init_download_tracking
-from eoir_foia.core.models import FileMetadata
-from eoir_foia.metadata.tx import create_tx_functions
+from eoir_foia.core.db import (
+    create_database,
+    get_connection,
+    get_db_connection,
+    init_download_tracking,
+)
 from eoir_foia.settings import METADATA_DIR, pg_db
 
 logger = structlog.get_logger()
@@ -68,7 +71,7 @@ def create_all(postfix=None):
         raise click.ClickException(str(e))
 
 
-@db.command("drop_foia")
+@db.command("drop-foia")
 @click.argument("postfix")
 def drop_foia(postfix):
     """
@@ -77,27 +80,27 @@ def drop_foia(postfix):
     if not click.confirm("Are you sure you want to drop all tables?"):
         return
 
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    with open_db(conn) as curs:
+    with get_db_connection() as curs:
         curs.execute(
             f"""
-            DROP TABLE "foia_appeal_{postfix}";
-            DROP TABLE "foia_application_{postfix}";
-            DROP TABLE "foia_bond_{postfix}";
-            DROP TABLE "foia_charges_{postfix}";
-            DROP TABLE "foia_motion_{postfix}";
-            DROP TABLE "foia_rider_{postfix}";
-            DROP TABLE "foia_schedule_{postfix}";
-            DROP TABLE "foia_proceeding_{postfix}";
-            DROP TABLE "foia_juvenile_{postfix}";
-            DROP TABLE "foia_fedcourts_{postfix}";
-            DROP TABLE "foia_probono_{postfix}";
-            DROP TABLE "foia_threembr_{postfix}";
-            DROP TABLE "foia_atty_{postfix}";
-            DROP TABLE "foia_caseid_{postfix}";
-            DROP TABLE "foia_casepriority_{postfix}";
-            DROP TABLE "foia_reps_{postfix}";
+            DROP TABLE IF EXISTS "foia_appeal_{postfix}";
+            DROP TABLE IF EXISTS "foia_application_{postfix}";
+            DROP TABLE IF EXISTS "foia_bond_{postfix}";
+            DROP TABLE IF EXISTS "foia_charges_{postfix}";
+            DROP TABLE IF EXISTS "foia_case_{postfix}";
+            DROP TABLE IF EXISTS "foia_custody_{postfix}";
+            DROP TABLE  IF EXISTS "foia_motion_{postfix}";
+            DROP TABLE  IF EXISTS "foia_rider_{postfix}";
+            DROP TABLE  IF EXISTS "foia_schedule_{postfix}";
+            DROP TABLE  IF EXISTS "foia_proceeding_{postfix}";
+            DROP TABLE  IF EXISTS "foia_juvenile_{postfix}";
+            DROP TABLE  IF EXISTS "foia_fedcourts_{postfix}";
+            DROP TABLE  IF EXISTS "foia_probono_{postfix}";
+            DROP TABLE  IF EXISTS "foia_threembr_{postfix}";
+            DROP TABLE  IF EXISTS "foia_atty_{postfix}";
+            DROP TABLE  IF EXISTS "foia_caseid_{postfix}";
+            DROP TABLE  IF EXISTS "foia_casepriority_{postfix}";
+            DROP TABLE  IF EXISTS "foia_reps_{postfix}";
             """
         )
+    return
