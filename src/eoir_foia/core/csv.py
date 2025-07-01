@@ -48,7 +48,6 @@ class CleanCsv:
         self.header_length = len(self.header)
         self.name = os.path.basename(self.csvfile)
         self.js_name = f"{JSON_DIR}/table-dtypes/{self.name.replace('.csv', '.json')}"
-        self.no_nul = os.path.abspath(self.csvfile).replace(".csv", "_no_nul.csv")
         self.bad_row = os.path.abspath(self.csvfile).replace(
             ".csv", "_br.csv"
         )  # [DEBUG]
@@ -71,7 +70,7 @@ class CleanCsv:
 
     def copy_to_table(self, connection, postfix, table="") -> None:
         """Copy processed CSV data to PostgreSQL using COPY command."""
-        with get_connection() as curs:
+        with connection.cursor() as curs:
             if not table:
                 table = self.table + "_" + postfix
             curs.execute("""SET session_replication_role = replica;""")
@@ -84,19 +83,7 @@ class CleanCsv:
                     copy.write(row)
 
             curs.execute("""SET session_replication_role = DEFAULT;""")
-
-    def replace_nul(self) -> None:
-        """Remove null bytes from CSV file to prevent processing errors."""
-        fi = open(self.csvfile, "rb")
-        data = fi.read()
-        fi.close()
-        fo = open(self.no_nul, "wb")
-        fo.write(data.replace(b"\x00", b""))
-        fo.close()
-
-    def del_no_nul(self) -> None:
-        """Clean up temporary file after processing."""
-        os.remove(self.no_nul)
+        connection.commit()
 
     def csv_gen_pk(self) -> iter:
         """Filter out rows with empty primary keys before database copy."""
@@ -110,7 +97,7 @@ class CleanCsv:
     def csv_gen(self, skip_header=True) -> list:
         """Main CSV processing generator that handles row length mismatches and data cleaning."""
         with open(
-            self.no_nul, "r", newline="", encoding="latin-1", errors="replace"
+            self.csvfile, "r", newline="", encoding="latin-1", errors="replace"
         ) as f:
             for i, row in enumerate(
                 csv.reader(f, delimiter="\t", quoting=csv.QUOTE_NONE)
@@ -153,7 +140,7 @@ class CleanCsv:
         """Debug utility: extract rows with more columns than header for inspection."""
         bad_rows = []
         with open(
-            self.no_nul, "r", newline="", encoding="latin-1", errors="replace"
+            self.csvfile, "r", newline="", encoding="latin-1", errors="replace"
         ) as f:
             for i, row in enumerate(
                 csv.reader(f, delimiter="\t", quoting=csv.QUOTE_NONE)
@@ -301,7 +288,7 @@ class CleanCsv:
     def get_bad_line(self, lineno="") -> list:
         """Debug utility: get specific row by line number for error analysis."""
         with open(
-            self.no_nul, "r", newline="", encoding="latin-1", errors="replace"
+            self.csvfile, "r", newline="", encoding="latin-1", errors="replace"
         ) as f:
             for i, row in enumerate(
                 csv.reader(f, delimiter="\t", quoting=csv.QUOTE_NONE)
@@ -314,7 +301,7 @@ class CleanCsv:
         _bad_rows = []
         index = list(self.dtypes.keys()).index(column)
         with open(
-            self.no_nul, "r", newline="", encoding="latin-1", errors="replace"
+            self.csvfile, "r", newline="", encoding="latin-1", errors="replace"
         ) as f:
             for i, row in enumerate(
                 csv.reader(f, delimiter="\t", quoting=csv.QUOTE_NONE)
