@@ -14,10 +14,7 @@ from eoir_foia.settings import DOWNLOAD_DIR
 logger = structlog.get_logger()
 
 def check_file_status() -> Tuple[FileMetadata, FileMetadata, str]:
-    """
-    Check status of remote file.
-    Returns (metadata, is_new_version)
-    """
+    """Check remote file status and compare with local version."""
     try:
         response = requests.head(EOIR_FOIA_URL)
         response.raise_for_status()
@@ -40,30 +37,16 @@ def check_file_status() -> Tuple[FileMetadata, FileMetadata, str]:
 
 
 def unzip(metadata: FileMetadata) -> Path:
-    """
-    Unzip the FOIA file into a dated directory.
-    
-    Args:
-        metadata: FileMetadata containing the last_modified date
-        
-    Returns:
-        Path to the directory containing the extracted files
-    """
+    """Extract FOIA ZIP file into dated directory using last_modified date."""
     zip_file = DOWNLOAD_DIR / metadata.local_path
-    # Create dated directory name based on metadata
     extract_dir = DOWNLOAD_DIR
     dated_dir = extract_dir / f"{metadata.last_modified:%m%d%y}-FOIA-TRAC-FILES"
-    
-    # Ensure directory exists
     extract_dir.mkdir(parents=True, exist_ok=True)
     
-    # Extract files using zipfile-deflate64
     
     with ZipFile(zip_file, 'r', allowZip64=True) as zip_ref:
         zip_ref.extractall(extract_dir)
     
-    # Find the root folder that was extracted
-    # This assumes the zip contains a single root folder
     extracted_items = [item for item in extract_dir.iterdir() 
                       if item.is_dir() and item != dated_dir 
                       and item.name not in (zip_file.stem, zip_file.name)]
@@ -71,11 +54,9 @@ def unzip(metadata: FileMetadata) -> Path:
     if extracted_items and len(extracted_items) == 1:
         root_folder = extracted_items[0]
         
-        # If the dated directory already exists, remove it
         if dated_dir.exists():
             shutil.rmtree(dated_dir)
             
-        # Rename the extracted root folder to the dated name
         root_folder.rename(dated_dir)
         return dated_dir
     
@@ -89,21 +70,14 @@ def download_file(
     timeout: int = 30,
     progress_callback: Optional[callable] = None
 ) -> Path:
-    """
-    
-    Download EOIR FOIA zip file.
-    Returns path to downloaded file.
-    """
+    """Download EOIR FOIA ZIP file with retry logic and progress tracking."""
     retries = 0
     while retries <= max_retries:
         try:
             with requests.get(EOIR_FOIA_URL, stream=True, timeout=timeout) as response:
                 response.raise_for_status()
                 
-                # Ensure directory exists
                 output_path.parent.mkdir(parents=True, exist_ok=True)
-                
-                # Write file with progress tracking
                 total = int(response.headers.get('content-length', 0))
                 downloaded = 0
                 
@@ -115,7 +89,6 @@ def download_file(
                             if progress_callback:
                                 progress_callback(downloaded, total)
                 
-                # Verify file size after download
                 actual_size = output_path.stat().st_size
                 if actual_size != total:
                     logger.error(f"Download incomplete: expected {total} bytes but got {actual_size} bytes")
@@ -126,7 +99,6 @@ def download_file(
                     else:
                         raise Exception("Download incomplete after maximum retries")
                 
-                # Record successful download
                 record_download_in_history(
                     content_length=metadata.content_length,
                     last_modified=metadata.last_modified,
