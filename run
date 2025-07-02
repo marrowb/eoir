@@ -3,15 +3,121 @@
 set -o errexit
 set -o pipefail
 
+DC="${DC:-exec}"
+
+# If we're running in CI we need to disable TTY allocation for docker compose
+# commands that enable it by default, such as exec and run.
+TTY=""
+if [[ ! -t 1 ]]; then
+  TTY="-T"
+fi
+
 # -----------------------------------------------------------------------------
 # Helper functions start with _ and aren't listed in this script's help menu.
 # -----------------------------------------------------------------------------
 
+function _dc {
+  docker compose "${DC}" ${TTY} "${@}"
+}
+
+function _in_docker {
+  # Check if we're running inside a Docker container
+  if [ -f /.dockerenv ]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
 # -----------------------------------------------------------------------------
 
 function eoir {
-  # Run eoir-foia CLI with uv
-  uv run eoir-foia "${@}"
+  # Run eoir-foia CLI
+  if _in_docker; then
+    eoir-foia "${@}"
+  else
+    if [ -f /.dockerenv ] || [ ! -f docker-compose.yml ]; then
+      # Running locally without Docker
+      uv run eoir-foia "${@}"
+    else
+      # Running with Docker
+      _dc app eoir-foia "${@}"
+    fi
+  fi
+}
+
+function shell {
+  # Start a shell session in the app container
+  if _in_docker; then
+    /bin/sh
+  else
+    _dc app sh
+  fi
+}
+
+function psql {
+  # Connect to PostgreSQL
+  if _in_docker; then
+    # Inside Docker, connect to postgres service
+    PGPASSWORD="${POSTGRES_PASSWORD}" psql -h postgres -p 5432 -U "${POSTGRES_USER}" -d "${POSTGRES_DB}"
+  else
+    # Outside Docker, check if using docker-compose
+    if [ -f docker-compose.yml ] && docker compose ps | grep -q postgres; then
+      # shellcheck disable=SC1091
+      . .env
+      _dc postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}"
+    else
+      # Local PostgreSQL
+      # shellcheck disable=SC1091
+      . .env
+      PGPASSWORD="${POSTGRES_PASSWORD}" psql -h localhost -p "${POSTGRES_PORT:-5432}" -U "${POSTGRES_USER}" -d "${POSTGRES_DB}"
+    fi
+  fi
+}
+
+function db:init {
+  # Initialize the database
+  eoir db init
+}
+
+function download:status {
+  # Check download status
+  eoir download status
+}
+
+function download:fetch {
+  # Download FOIA data
+  eoir download fetch "${@}"
+}
+
+function clean {
+  # Run CSV cleaning operations
+  eoir clean "${@}"
+}
+
+function docker:build {
+  # Build Docker images
+  docker compose build
+}
+
+function docker:up {
+  # Start Docker containers
+  docker compose up -d
+}
+
+function docker:down {
+  # Stop Docker containers
+  docker compose down
+}
+
+function docker:logs {
+  # View Docker logs
+  docker compose logs "${@}"
+}
+
+function docker:ps {
+  # List Docker containers
+  docker compose ps
 }
 
 function help {
@@ -20,10 +126,6 @@ function help {
   compgen -A function | grep -v "^_" | cat -n
 
   printf "\nExtended help:\n  Each task has comments for general usage\n"
-}
-
-function psql {
-  PGPASSWORD=devpassword psql -h localhost -p 5432 -U bklg -d eoir_foia
 }
 
 # This idea is heavily inspired by: https://github.com/adriancooney/Taskfile
