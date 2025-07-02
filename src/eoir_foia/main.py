@@ -1,10 +1,13 @@
 import click
-from .cli import db, clean, download, config
+
+from .cli import clean, config, db, download
+
 
 @click.group()
 def cli():
     """EOIR FOIA data processing tools."""
     pass
+
 
 cli.add_command(db.db)
 cli.add_command(clean.clean)
