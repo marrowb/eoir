@@ -1,16 +1,17 @@
 """Core download functionality for EOIR FOIA data."""
 
-from datetime import datetime
-import requests
 import shutil
-from zipfile_deflate64 import ZipFile
+from datetime import datetime
 from pathlib import Path
-import structlog
 from typing import Optional, Tuple
-from eoir_foia.settings import EOIR_FOIA_URL
+
+import requests
+import structlog
+from zipfile_deflate64 import ZipFile
+
 from eoir_foia.core.db import get_latest_download, record_download_in_history
 from eoir_foia.core.models import FileMetadata
-from eoir_foia.settings import DOWNLOAD_DIR
+from eoir_foia.settings import DOWNLOAD_DIR, EOIR_FOIA_URL
 
 logger = structlog.get_logger()
 
@@ -39,7 +40,7 @@ def check_file_status() -> Tuple[FileMetadata, FileMetadata, str]:
 
 def unzip(metadata: FileMetadata) -> Path:
     """Extract FOIA ZIP file into dated directory using last_modified date."""
-    zip_file = DOWNLOAD_DIR / metadata.local_path
+    zip_file = metadata.local_path
     extract_dir = DOWNLOAD_DIR
     dated_dir = extract_dir / f"{metadata.last_modified:%m%d%y}-FOIA-TRAC-FILES"
     extract_dir.mkdir(parents=True, exist_ok=True)
@@ -70,7 +71,6 @@ def unzip(metadata: FileMetadata) -> Path:
 def download_file(
     output_path: Path,
     metadata: FileMetadata,
-    retry: bool = True,
     max_retries: int = 3,
     timeout: int = 30,
     progress_callback: Optional[callable] = None,
@@ -112,7 +112,7 @@ def download_file(
                     content_length=metadata.content_length,
                     last_modified=metadata.last_modified,
                     etag=metadata.etag,
-                    local_path=str(output_path).split("/")[1],
+                    local_path=str(output_path),
                     status="completed",
                 )
 

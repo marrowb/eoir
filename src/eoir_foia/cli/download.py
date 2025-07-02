@@ -1,12 +1,14 @@
 """Download commands for EOIR FOIA data."""
 
-import click
 from datetime import datetime
 from pathlib import Path
-import structlog
 from typing import Optional
-from eoir_foia.core.download import check_file_status, download_file, unzip
+
+import click
+import structlog
+
 from eoir_foia.core.db import init_download_tracking
+from eoir_foia.core.download import check_file_status, download_file, unzip
 from eoir_foia.settings import DOWNLOAD_DIR
 
 logger = structlog.get_logger()
@@ -59,7 +61,6 @@ def fetch(no_retry: bool, no_unzip: bool):
         if current == local:
             return
 
-        # Setup progress bar
         with click.progressbar(
             length=current.content_length,
             label="Downloading",
@@ -70,18 +71,16 @@ def fetch(no_retry: bool, no_unzip: bool):
             def update_progress(downloaded: int, total: int):
                 bar.update(downloaded - bar.pos)
 
-            # Download with progress tracking
             output_path = DOWNLOAD_DIR / f"FOIA-TRAC-{current.last_modified:%Y%m}.zip"
             download_file(
                 output_path=output_path,
                 metadata=current,
-                retry=not no_retry,
+                max_retries=0 if no_retry else 3,
                 progress_callback=update_progress,
             )
 
         click.echo(f"\nDownload complete: {output_path}")
 
-        # Unzip if requested
         if not no_unzip:
             unzip(current)
             click.echo(f"Extracted to downloads folder...")

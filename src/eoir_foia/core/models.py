@@ -5,6 +5,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+from eoir_foia.settings import DOWNLOAD_DIR
+
 
 @dataclass
 class FileMetadata:
@@ -14,6 +16,11 @@ class FileMetadata:
     last_modified: datetime
     etag: str
     local_path: Optional[Path] = None
+
+    def __post_init__(self):
+        if self.local_path:
+            return
+        self.local_path = DOWNLOAD_DIR / f"FOIA-TRAC-{self.last_modified:%Y%m}.zip"
 
     @classmethod
     def from_headers(cls, headers: dict) -> "FileMetadata":
