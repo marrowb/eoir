@@ -39,7 +39,6 @@ def init():
         init_download_tracking()
         click.echo("Initialized download tracking table")
 
-        # Create all FOIA tables
         create_all()
 
     except Exception as e:
@@ -118,22 +117,18 @@ def drop_foia(postfix):
 )
 def dump(output_dir, postfix):
     """Dump all FOIA tables to a compressed file using pg_dump."""
-    # Check if pg_dump is available
     if not shutil.which("pg_dump"):
         raise click.ClickException(
             "pg_dump not found. Please ensure PostgreSQL client tools are installed."
         )
 
     try:
-        # Use build_postfix if not provided
         if not postfix:
             postfix = build_postfix()
             click.echo(f"Using postfix from latest download: {postfix}")
 
-        # Build output path
         output_path = Path(output_dir) / f"foia_{postfix}.dump"
 
-        # Build pg_dump command
         dump_cmd = [
             "pg_dump",
             "-t",
@@ -146,30 +141,26 @@ def dump(output_dir, postfix):
             pg_host,
             "-p",
             pg_port,
-            "-Fc",  # Custom format (compressed)
+            "-Fc",
         ]
 
         click.echo(f"Dumping FOIA tables with postfix '{postfix}' to {output_path}")
 
-        # Set PGPASSWORD environment variable
         env = os.environ.copy()
         env["PGPASSWORD"] = pg_pass
 
-        # Execute pg_dump
         with open(output_path, "wb") as dump_file:
             result = subprocess.run(
                 dump_cmd, stdout=dump_file, stderr=subprocess.PIPE, env=env, text=False
             )
 
         if result.returncode != 0:
-            # Clean up failed dump file
             if output_path.exists():
                 output_path.unlink()
             raise click.ClickException(
                 f"pg_dump failed: {result.stderr.decode() if result.stderr else 'Unknown error'}"
             )
 
-        # Check if dump file was created and has content
         if not output_path.exists() or output_path.stat().st_size == 0:
             if output_path.exists():
                 output_path.unlink()
