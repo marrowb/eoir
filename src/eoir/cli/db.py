@@ -9,14 +9,14 @@ from pathlib import Path
 import click
 import structlog
 
-from eoir_foia.core.clean import build_postfix
-from eoir_foia.core.db import (
+from eoir.core.clean import build_postfix
+from eoir.core.db import (
     create_database,
     get_connection,
     get_db_connection,
     init_download_tracking,
 )
-from eoir_foia.settings import METADATA_DIR, pg_db, pg_host, pg_pass, pg_port, pg_user
+from eoir.settings import METADATA_DIR, pg_db, pg_host, pg_pass, pg_port, pg_user
 
 logger = structlog.get_logger()
 

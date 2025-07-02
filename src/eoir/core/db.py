@@ -6,9 +6,9 @@ from typing import Optional
 
 import psycopg
 
-from eoir_foia.core.db_utils import db_operation
-from eoir_foia.core.models import FileMetadata
-from eoir_foia.settings import ADMIN_URL, DATABASE_URL, pg_db
+from eoir.core.db_utils import db_operation
+from eoir.core.models import FileMetadata
+from eoir.settings import ADMIN_URL, DATABASE_URL, pg_db
 
 
 @contextmanager
@@ -62,7 +62,7 @@ def init_download_tracking():
     with get_db_connection() as cur:
         cur.execute(
             """
-            CREATE TABLE IF NOT EXISTS eoir_foia_download_history (
+            CREATE TABLE IF NOT EXISTS eoir_download_history (
                 id SERIAL PRIMARY KEY,
                 download_date TIMESTAMP NOT NULL,
                 content_length BIGINT NOT NULL,
@@ -71,7 +71,7 @@ def init_download_tracking():
                 local_path TEXT NOT NULL,
                 status TEXT NOT NULL
             );
-            CREATE INDEX IF NOT EXISTS eoir_foia_download_history_id_idx ON eoir_foia_download_history(id);
+            CREATE INDEX IF NOT EXISTS eoir_download_history_id_idx ON eoir_download_history(id);
         """
         )
 
@@ -83,7 +83,7 @@ def get_latest_download() -> Optional[FileMetadata]:
         cur.execute(
             """
             SELECT content_length, last_modified, etag, local_path
-            FROM eoir_foia_download_history 
+            FROM eoir_download_history 
             WHERE status = 'completed'
             ORDER BY download_date DESC 
             LIMIT 1
@@ -112,7 +112,7 @@ def record_download_in_history(
     with get_db_connection() as cur:
         cur.execute(
             """
-            INSERT INTO eoir_foia_download_history 
+            INSERT INTO eoir_download_history 
             (download_date, content_length, last_modified, 
              etag, local_path, status)
             VALUES (NOW(), %s, %s, %s, %s, %s)

@@ -12,7 +12,7 @@ def process_file_worker(args):
     """Worker function for multiprocessing."""
     csv_file, postfix = args
 
-    from eoir_foia.core.clean import clean_single_file
+    from eoir.core.clean import clean_single_file
 
     try:
         return clean_single_file(csv_file, postfix)

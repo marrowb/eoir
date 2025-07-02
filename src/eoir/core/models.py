@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from eoir_foia.settings import DOWNLOAD_DIR
+from eoir.settings import DOWNLOAD_DIR
 
 
 @dataclass

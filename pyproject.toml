@@ -1,5 +1,5 @@
 [project]
-name = "eoir-foia"
+name = "eoir"
 version = "0.1.0"
 description = "EOIR FOIA data processing tools"
 readme = "README.md"
@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.scripts]
-eoir-foia = "eoir_foia.main:cli"
+eoir = "eoir.main:cli"
 
 [build-system]
 requires = ["setuptools>=61.0"]
@@ -23,4 +23,4 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
-packages = ["eoir_foia"]
+packages = ["eoir"]

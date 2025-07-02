@@ -10,9 +10,9 @@ from typing import Dict, List, Optional
 import psycopg
 import structlog
 
-from eoir_foia.core.csv import CleanCsv
-from eoir_foia.core.db import get_connection, get_latest_download
-from eoir_foia.settings import DOWNLOAD_DIR, JSON_DIR
+from eoir.core.csv import CleanCsv
+from eoir.core.db import get_connection, get_latest_download
+from eoir.settings import DOWNLOAD_DIR, JSON_DIR
 
 logger = structlog.get_logger()
 

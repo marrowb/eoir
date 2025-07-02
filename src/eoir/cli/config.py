@@ -6,7 +6,7 @@ from pathlib import Path
 import click
 import structlog
 
-from eoir_foia.core.config import (
+from eoir.core.config import (
     get_current_database_config,
     read_env_file,
     test_database_connection,

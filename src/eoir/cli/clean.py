@@ -8,7 +8,7 @@ from typing import List, Optional
 import click
 import structlog
 
-from eoir_foia.core.clean import (
+from eoir.core.clean import (
     build_postfix,
     check_for_null_bytes,
     clean_single_file,
@@ -16,7 +16,7 @@ from eoir_foia.core.clean import (
     get_download_dir,
     remove_null_bytes_subprocess,
 )
-from eoir_foia.settings import JSON_DIR
+from eoir.settings import JSON_DIR
 
 logger = structlog.get_logger()
 
@@ -135,7 +135,7 @@ def clean(
         click.echo(f"\nProcessing {len(files_to_process)} CSV files")
 
         if parallel:
-            from eoir_foia.core.parallel import clean_files_parallel
+            from eoir.core.parallel import clean_files_parallel
 
             worker_count = workers or min(mp.cpu_count() - 1, 8)
             click.echo(f"Using parallel processing with {worker_count} workers")

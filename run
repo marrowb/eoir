@@ -32,16 +32,16 @@ function _in_docker {
 # -----------------------------------------------------------------------------
 
 function eoir {
-  # Run eoir-foia CLI
+  # Run eoir CLI
   if _in_docker; then
-    eoir-foia "${@}"
+    eoir "${@}"
   else
     if [ -f /.dockerenv ] || [ ! -f docker-compose.yml ]; then
       # Running locally without Docker
-      uv run eoir-foia "${@}"
+      uv run eoir "${@}"
     else
       # Running with Docker
-      _dc app eoir-foia "${@}"
+      _dc app eoir "${@}"
     fi
   fi
 }

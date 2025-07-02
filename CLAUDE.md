@@ -15,12 +15,12 @@ pip install -e .  # Install package in development mode
 
 ### Main CLI Commands
 ```bash
-eoir-foia --help                    # Show all available commands
-eoir-foia db init                   # Initialize database and tables
-eoir-foia download status           # Check for new files available
-eoir-foia download fetch            # Download latest FOIA data
-eoir-foia download fetch --no-unzip # Download without auto-extracting
-eoir-foia clean                     # CSV cleaning operations (placeholder)
+eoir --help                    # Show all available commands
+eoir db init                   # Initialize database and tables
+eoir download status           # Check for new files available
+eoir download fetch            # Download latest FOIA data
+eoir download fetch --no-unzip # Download without auto-extracting
+eoir clean                     # CSV cleaning operations (placeholder)
 ```
 
 ### Testing Commands
@@ -35,7 +35,7 @@ eoir-foia clean                     # CSV cleaning operations (placeholder)
 ## Architecture
 
 ### Package Structure
-- `src/eoir_foia/` - Main package
+- `src/eoir/` - Main package
   - `cli/` - Click command-line interface modules
     - `download.py` - File download commands with progress tracking
     - `db.py` - Database initialization commands

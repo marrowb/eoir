@@ -6,8 +6,8 @@ import sys
 from contextlib import contextmanager
 from datetime import datetime, time
 
-from eoir_foia.core.db import get_db_connection
-from eoir_foia.settings import JSON_DIR
+from eoir.core.db import get_db_connection
+from eoir.settings import JSON_DIR
 
 
 @contextmanager

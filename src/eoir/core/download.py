@@ -9,9 +9,9 @@ import requests
 import structlog
 from zipfile_deflate64 import ZipFile
 
-from eoir_foia.core.db import get_latest_download, record_download_in_history
-from eoir_foia.core.models import FileMetadata
-from eoir_foia.settings import DOWNLOAD_DIR, EOIR_FOIA_URL
+from eoir.core.db import get_latest_download, record_download_in_history
+from eoir.core.models import FileMetadata
+from eoir.settings import DOWNLOAD_DIR, EOIR_URL
 
 logger = structlog.get_logger()
 
@@ -19,7 +19,7 @@ logger = structlog.get_logger()
 def check_file_status() -> Tuple[FileMetadata, FileMetadata, str]:
     """Check remote file status and compare with local version."""
     try:
-        response = requests.head(EOIR_FOIA_URL)
+        response = requests.head(EOIR_URL)
         response.raise_for_status()
         current = FileMetadata.from_headers(response.headers)
 
@@ -79,7 +79,7 @@ def download_file(
     retries = 0
     while retries <= max_retries:
         try:
-            with requests.get(EOIR_FOIA_URL, stream=True, timeout=timeout) as response:
+            with requests.get(EOIR_URL, stream=True, timeout=timeout) as response:
                 response.raise_for_status()
 
                 output_path.parent.mkdir(parents=True, exist_ok=True)

@@ -7,9 +7,9 @@ from typing import Optional
 import click
 import structlog
 
-from eoir_foia.core.db import init_download_tracking
-from eoir_foia.core.download import check_file_status, download_file, unzip
-from eoir_foia.settings import DOWNLOAD_DIR
+from eoir.core.db import init_download_tracking
+from eoir.core.download import check_file_status, download_file, unzip
+from eoir.settings import DOWNLOAD_DIR
 
 logger = structlog.get_logger()
 
