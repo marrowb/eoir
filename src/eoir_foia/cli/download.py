@@ -1,4 +1,5 @@
 """Download commands for EOIR FOIA data."""
+
 import click
 from datetime import datetime
 from pathlib import Path
@@ -9,6 +10,7 @@ from eoir_foia.core.db import init_download_tracking
 from eoir_foia.settings import DOWNLOAD_DIR
 
 logger = structlog.get_logger()
+
 
 @click.group()
 def download():
@@ -52,38 +54,38 @@ def fetch(no_retry: bool, no_unzip: bool):
     """Download latest EOIR FOIA data."""
     try:
         current, local, message = check_file_status()
-        
+
         click.echo(message)
         if current == local:
             return
-            
+
         # Setup progress bar
         with click.progressbar(
             length=current.content_length,
-            label='Downloading',
-            fill_char='=',
-            empty_char='-'
+            label="Downloading",
+            fill_char="=",
+            empty_char="-",
         ) as bar:
+
             def update_progress(downloaded: int, total: int):
                 bar.update(downloaded - bar.pos)
-            
+
             # Download with progress tracking
             output_path = DOWNLOAD_DIR / f"FOIA-TRAC-{current.last_modified:%Y%m}.zip"
             download_file(
                 output_path=output_path,
                 metadata=current,
                 retry=not no_retry,
-                progress_callback=update_progress
+                progress_callback=update_progress,
             )
-            
+
         click.echo(f"\nDownload complete: {output_path}")
-        
+
         # Unzip if requested
         if not no_unzip:
             unzip(current)
             click.echo(f"Extracted to downloads folder...")
-            
+
     except Exception as e:
         logger.error("Download failed", error=str(e))
         raise click.ClickException(str(e))
-

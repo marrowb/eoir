@@ -1,14 +1,17 @@
 """Configuration management commands."""
+
 import getpass
 from pathlib import Path
+
 import click
 import structlog
+
 from eoir_foia.core.config import (
+    get_current_database_config,
+    read_env_file,
     test_database_connection,
-    read_env_file, 
-    write_env_file,
     validate_database_config,
-    get_current_database_config
+    write_env_file,
 )
 
 logger = structlog.get_logger()
@@ -25,74 +28,65 @@ def db():
     """Configure database connection interactively."""
     click.echo("Database Configuration")
     click.echo("=" * 30)
-    
-    # Get current configuration
+
     current_config = get_current_database_config()
-    
-    # Prompt for database configuration
-    host = click.prompt(
-        "PostgreSQL Host", 
-        default=current_config['POSTGRES_HOST']
-    )
-    
-    port = click.prompt(
-        "PostgreSQL Port", 
-        default=current_config['POSTGRES_PORT']
-    )
-    
-    user = click.prompt(
-        "PostgreSQL Username", 
-        default=current_config['POSTGRES_USER']
-    )
-    
-    # Use getpass for password to hide input
-    current_password = current_config['POSTGRES_PASSWORD']
+
+    host = click.prompt("PostgreSQL Host", default=current_config["POSTGRES_HOST"])
+
+    port = click.prompt("PostgreSQL Port", default=current_config["POSTGRES_PORT"])
+
+    user = click.prompt("PostgreSQL Username", default=current_config["POSTGRES_USER"])
+
+    current_password = current_config["POSTGRES_PASSWORD"]
     if current_password:
-        password_prompt = f"PostgreSQL Password [current: {'*' * len(current_password)}]"
+        password_prompt = (
+            f"PostgreSQL Password [current: {'*' * len(current_password)}]"
+        )
         password = getpass.getpass(password_prompt + ": ")
-        if not password:  # If user just pressed enter, keep current password
+        if not password:
             password = current_password
     else:
         password = getpass.getpass("PostgreSQL Password: ")
-    
+
     database = click.prompt(
-        "PostgreSQL Database", 
-        default=current_config['POSTGRES_DB'] or user
+        "PostgreSQL Database", default=current_config["POSTGRES_DB"] or user
     )
-    
-    # Validate configuration
+
     valid, error_msg = validate_database_config(host, port, user, password, database)
     if not valid:
         raise click.ClickException(f"Invalid configuration: {error_msg}")
-    
-    # Test database connection
+
     click.echo("\nTesting database connection...")
     success, error_msg = test_database_connection(host, port, user, password, database)
-    
+
     if not success:
-        if click.confirm(f"Connection test failed: {error_msg}\nDo you want to save the configuration anyway?"):
+        if click.confirm(
+            f"Connection test failed: {error_msg}\nDo you want to save the configuration anyway?"
+        ):
             pass
         else:
             click.echo("Configuration cancelled.")
             return
     else:
-        if error_msg:  # Database doesn't exist but connection is valid
+        if error_msg:
             click.echo(f"✓ {error_msg}")
         else:
             click.echo("✓ Database connection successful!")
-    
+
     # Read existing environment file
     env_vars = read_env_file()
-    
+
     # Update database configuration
-    env_vars.update({
-        'POSTGRES_HOST': host,
-        'POSTGRES_PORT': port,
-        'POSTGRES_USER': user,
-        'POSTGRES_PASSWORD': password,
-        'POSTGRES_DB': database
-    })
-    
+    env_vars.update(
+        {
+            "POSTGRES_HOST": host,
+            "POSTGRES_PORT": port,
+            "POSTGRES_USER": user,
+            "POSTGRES_PASSWORD": password,
+            "POSTGRES_DB": database,
+        }
+    )
+
     # Write updated environment file
     if write_env_file(env_vars):
         click.echo("✓ Configuration saved to .env file")
@@ -105,16 +99,16 @@ def show():
     """Show current configuration (passwords masked)."""
     click.echo("Current Configuration")
     click.echo("=" * 30)
-    
+
     config_dict = get_current_database_config()
-    
+
     for key, value in config_dict.items():
-        if 'PASSWORD' in key:
-            masked_value = '*' * len(value) if value else '(not set)'
+        if "PASSWORD" in key:
+            masked_value = "*" * len(value) if value else "(not set)"
             click.echo(f"{key}: {masked_value}")
         else:
             click.echo(f"{key}: {value}")
-    
+
     # Show additional environment info
     env_file = Path(".env")
     if env_file.exists():
@@ -124,21 +118,23 @@ def show():
 
 
 @config.command()
-@click.confirmation_option(prompt="Are you sure you want to test the database connection?")
+@click.confirmation_option(
+    prompt="Are you sure you want to test the database connection?"
+)
 def test():
     """Test current database configuration."""
     config_dict = get_current_database_config()
-    
+
     click.echo("Testing database connection...")
-    
+
     success, error_msg = test_database_connection(
-        config_dict['POSTGRES_HOST'],
-        config_dict['POSTGRES_PORT'],
-        config_dict['POSTGRES_USER'],
-        config_dict['POSTGRES_PASSWORD'],
-        config_dict['POSTGRES_DB']
+        config_dict["POSTGRES_HOST"],
+        config_dict["POSTGRES_PORT"],
+        config_dict["POSTGRES_USER"],
+        config_dict["POSTGRES_PASSWORD"],
+        config_dict["POSTGRES_DB"],
     )
-    
+
     if success:
         if error_msg:
             click.echo(f"✓ {error_msg}")
