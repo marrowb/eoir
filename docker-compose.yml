@@ -36,6 +36,7 @@ services:
       - ./downloads:/app/downloads
       - ./logs:/app/logs
       - ./.env:/app/.env
+      - ./dumps:/app/dumps
     stdin_open: true
     tty: true
 
