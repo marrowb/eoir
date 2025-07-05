@@ -39,8 +39,6 @@ def init():
         init_download_tracking()
         click.echo("Initialized download tracking table")
 
-        create_all()
-
     except Exception as e:
         logger.error("Database initialization failed", error=str(e))
         raise click.ClickException(str(e))

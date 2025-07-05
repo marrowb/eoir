@@ -1,5 +1,7 @@
 """Pipeline command to orchestrate the complete EOIR data processing workflow."""
 
+import subprocess
+import sys
 from pathlib import Path
 
 import click
@@ -9,6 +11,39 @@ from eoir.core.clean import build_postfix
 from eoir.core.db import create_database, get_db_connection
 
 logger = structlog.get_logger()
+
+
+def run_cli_command(command_parts, stream_output=False):
+    """Run an eoir CLI command using subprocess.
+    
+    Args:
+        command_parts: List of command parts to run
+        stream_output: If True, stream output in real-time (for progress bars)
+    """
+    # Check if we should use the run script
+    if Path("./run").exists() and not Path("/.dockerenv").exists():
+        # We're outside Docker, use the run script
+        cmd = ["./run", "eoir"] + command_parts
+    else:
+        # We're inside Docker or eoir is installed
+        cmd = ["eoir"] + command_parts
+    
+    if stream_output:
+        # Stream output directly to terminal for real-time progress
+        result = subprocess.run(cmd, stdin=subprocess.DEVNULL)
+    else:
+        # Capture output for processing
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        
+        if result.stdout:
+            click.echo(result.stdout.rstrip())
+    
+    if result.returncode != 0:
+        if not stream_output and result.stderr:
+            click.echo(result.stderr.rstrip(), err=True)
+        raise click.ClickException(f"Command failed: {' '.join(command_parts)}")
+    
+    return result
 
 
 @click.command("run-pipeline")
@@ -38,8 +73,6 @@ logger = structlog.get_logger()
 )
 def run_pipeline(workers, output_dir, skip_download, no_unzip):
     """Run complete EOIR data pipeline from download to dump."""
-    ctx = click.get_current_context()
-    
     click.echo("Starting EOIR data pipeline...")
     click.echo("=" * 50)
     
@@ -62,8 +95,7 @@ def run_pipeline(workers, output_dir, skip_download, no_unzip):
     # Step 2: Initialize download tracking
     click.echo("\n[2/6] Initializing download tracking...")
     try:
-        from eoir.cli.db import init
-        ctx.invoke(init)
+        run_cli_command(["db", "init"])
         click.echo("✓ Download tracking initialized")
     except Exception as e:
         click.echo(f"✗ Failed to initialize: {e}", err=True)
@@ -73,8 +105,14 @@ def run_pipeline(workers, output_dir, skip_download, no_unzip):
     if not skip_download:
         click.echo("\n[3/6] Downloading FOIA data...")
         try:
-            from eoir.cli.download import fetch
-            ctx.invoke(fetch, no_unzip=no_unzip)
+            # First check status
+            run_cli_command(["download", "status"])
+            
+            # Run download with streaming output for progress bar
+            download_cmd = ["download", "fetch"]
+            if no_unzip:
+                download_cmd.append("--no-unzip")
+            run_cli_command(download_cmd, stream_output=True)
             click.echo("✓ Download complete")
         except Exception as e:
             click.echo(f"✗ Download failed: {e}", err=True)
@@ -89,8 +127,7 @@ def run_pipeline(workers, output_dir, skip_download, no_unzip):
     # Step 4: Create tables
     click.echo(f"\n[4/6] Creating FOIA tables with postfix {postfix}...")
     try:
-        from eoir.cli.db import create
-        ctx.invoke(create, postfix=postfix)
+        run_cli_command(["db", "create-all", "--postfix", postfix])
         click.echo("✓ Tables created")
     except Exception as e:
         click.echo(f"✗ Table creation failed: {e}", err=True)
@@ -99,9 +136,7 @@ def run_pipeline(workers, output_dir, skip_download, no_unzip):
     # Step 5: Clean data in parallel
     click.echo(f"\n[5/6] Cleaning CSV files (parallel with {workers} workers)...")
     try:
-        from eoir.cli.clean import clean
-        ctx.invoke(clean, path=None, postfix=postfix, choose=False, 
-                  parallel=True, workers=workers)
+        run_cli_command(["clean", "--postfix", postfix, "--parallel", "--workers", str(workers)], stream_output=True)
         click.echo("✓ Data cleaning complete")
     except Exception as e:
         click.echo(f"✗ Data cleaning failed: {e}", err=True)
@@ -113,8 +148,7 @@ def run_pipeline(workers, output_dir, skip_download, no_unzip):
         # Create output directory if it doesn't exist
         Path(output_dir).mkdir(parents=True, exist_ok=True)
         
-        from eoir.cli.db import dump
-        ctx.invoke(dump, output_dir=output_dir, postfix=postfix)
+        run_cli_command(["db", "dump", output_dir, "--postfix", postfix])
         click.echo(f"✓ Data dumped to {output_dir}/foia_{postfix}.dump")
     except Exception as e:
         click.echo(f"✗ Data dump failed: {e}", err=True)
