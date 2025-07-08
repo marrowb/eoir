@@ -1,5 +1,9 @@
 # EOIR FOIA Data Processing Tool
 
+[![PyPI version](https://badge.fury.io/py/eoir.svg)](https://badge.fury.io/py/eoir)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+
 A high-performance tool for downloading, processing, and managing U.S. immigration court data from the Department of Justice's public FOIA releases.
 
 ## Overview
@@ -9,27 +13,33 @@ The Executive Office for Immigration Review (EOIR) releases anonymized immigrati
 ## Features
 
 - **Automated Downloads**: Fetch the latest FOIA data releases with progress tracking
-- =? **Smart Extraction**: Automatically extract and organize ZIP files
+- **Smart Extraction**: Automatically extract and organize ZIP files
 - **Data Cleaning**: Clean and validate CSV files with parallel processing support
 - **Database Management**: Load data into PostgreSQL with versioned table names
 - **Pipeline Automation**: One-command execution of the entire workflow
 - **Docker Support**: Fully containerized with Docker Compose
 - **Progress Tracking**: Real-time progress bars and status updates
-- = **Incremental Updates**: Only download new data when available
+- **Incremental Updates**: Only download new data when available
 
 ## Requirements
 
-- Python 3.13+
+- Python 3.10+
 - PostgreSQL database
 - Docker and Docker Compose (optional, for containerized deployment)
 
 ## Installation
 
-### Local Installation
+### Install from PyPI
+
+```bash
+pip install eoir
+```
+
+### Local Development Installation
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/eoir.git
+git clone https://github.com/marrowb/eoir.git
 cd eoir
 ```
 
@@ -48,7 +58,7 @@ cp .env.example .env
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/eoir.git
+git clone https://github.com/marrowb/eoir.git
 cd eoir
 ```
 
@@ -313,7 +323,7 @@ Contributions are welcome! Please follow these guidelines:
 
 ## License
 
-[Add license information here]
+[MIT License Copyright (c) 2025 Backlog Immigration LLC](LICENSE)
 
 ## Acknowledgments
 

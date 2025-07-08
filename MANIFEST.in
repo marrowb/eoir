@@ -1,0 +1,24 @@
+# Include the README
+include README.md
+
+# Include the license file
+include LICENSE
+
+# Include all JSON files in the metadata directory
+recursive-include src/eoir/metadata *.json
+
+# Include SQL files in the metadata directory
+include src/eoir/metadata/*.sql
+
+# Include the environment example file
+include .env.example
+
+# Exclude any compiled Python files
+global-exclude *.py[co]
+global-exclude __pycache__
+
+# Exclude version control files
+global-exclude .git*
+
+# Exclude test files if any
+global-exclude test_*

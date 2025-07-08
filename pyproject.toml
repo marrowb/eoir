@@ -3,16 +3,38 @@ name = "eoir"
 version = "0.1.0"
 description = "EOIR FOIA data processing tools"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+    {name = "Backlog Immigration LLC", email = "info@bklg.org"},
+]
+maintainers = [
+    {name = "Backlog Immigration LLC", email = "info@bklg.org"},
+]
+keywords = ["eoir", "foia", "immigration", "data-processing", "etl"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Legal Industry",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Database"
+]
 dependencies = [
     "click>=8.1.8",
     "psycopg==3.2.1",
     "python-dotenv>=1.0.1",
     "requests>=2.32.3",
     "structlog>=24.1.0",
-    "zipfile-deflate64>=0.2.0",
-    "ipython"
+    "zipfile-deflate64>=0.2.0"
 ]
+
+[project.urls]
+Homepage = "https://github.com/marrowb/eoir"
+Repository = "https://github.com/marrowb/eoir"
+Issues = "https://github.com/marrowb/eoir/issues"
+Documentation = "https://github.com/marrowb/eoir#readme"
 
 [project.scripts]
 eoir = "eoir.main:cli"
@@ -23,4 +45,13 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
-packages = ["eoir"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["eoir*"]
+
+[[tool.uv.index]]
+name = "testpypi"
+url = "https://test.pypi.org/simple/"
+publish-url = "https://test.pypi.org/legacy/"
+explicit = true

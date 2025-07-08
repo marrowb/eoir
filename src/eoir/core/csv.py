@@ -129,8 +129,6 @@ class CleanCsv:
                         yield self.clean_row(self.add_extra_cols(row))
                 except (AttributeError, IndexError, TypeError) as e:
                     print(e)
-                    # DEBUG: Uncomment for interactive debugging
-                    # import IPython; IPython.embed()
                     continue
             else:
                 self.row_count = i
@@ -207,7 +205,6 @@ class CleanCsv:
                 else:
                     continue
             except IndexError:
-                # import IPython; IPython.embed()
                 return bad_values
 
     def shift_values(self, row):
