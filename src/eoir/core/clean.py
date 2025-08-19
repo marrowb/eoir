@@ -5,6 +5,7 @@ import os
 import subprocess
 from datetime import datetime
 from pathlib import Path
+from re import I
 from typing import Dict, List, Optional
 
 import psycopg
@@ -41,6 +42,7 @@ def get_download_dir(user_path: Optional[str] = None) -> Path:
     metadata = get_latest_download()
     if metadata:
         dated_dir = DOWNLOAD_DIR / f"{metadata.last_modified:%m%d%y}-FOIA-TRAC-FILES"
+        print(dated_dir)
         if dated_dir.exists() and dated_dir.is_dir():
             return dated_dir
 
@@ -66,8 +68,8 @@ def get_csv_files(directory: Path) -> List[Path]:
     with open(f"{JSON_DIR}/tables.json", "r") as f:
         tables_map = json.load(f)
 
-    for file_path in directory.glob("*.csv"):
-        # Skip lookup files and other non-main CSV files
+    for file_path in directory.rglob("*.csv"):
+        print(file_path)
         parent_name = file_path.parent.name.lower()
         if parent_name != "lookup" and file_path.name in tables_map.keys():
             csv_files.append(file_path)
@@ -77,7 +79,12 @@ def get_csv_files(directory: Path) -> List[Path]:
 
 def check_for_null_bytes(directory: Path) -> bool:
     """Check if any CSV file in directory contains null bytes."""
-    csv_files = list(directory.glob("*.csv"))
+    csv_files = [
+        file
+        for file in list(directory.rglob("*.csv"))
+        if "lookup" not in file.parent.name.lower()
+    ]
+    print(csv_files)
     if not csv_files:
         return False
 
