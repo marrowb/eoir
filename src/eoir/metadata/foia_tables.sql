@@ -21,7 +21,7 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
--- Name: foia_appeal; Type: TABLE; Schema: public; Owner: bklg
+-- Name: foia_appeal; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE UNLOGGED TABLE public."foia_appeal_(%s)" (
@@ -45,10 +45,10 @@ CREATE UNLOGGED TABLE public."foia_appeal_(%s)" (
 );
 
 
-ALTER TABLE public."foia_appeal_(%s)" OWNER TO bklg;
+ALTER TABLE public."foia_appeal_(%s)" OWNER TO postgres;
 
 --
--- Name: foia_application; Type: TABLE; Schema: public; Owner: bklg
+-- Name: foia_application; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE UNLOGGED TABLE public."foia_application_(%s)" (
@@ -61,10 +61,10 @@ CREATE UNLOGGED TABLE public."foia_application_(%s)" (
 );
 
 
-ALTER TABLE public."foia_application_(%s)" OWNER TO bklg;
+ALTER TABLE public."foia_application_(%s)" OWNER TO postgres;
 
 --
--- Name: foia_bond; Type: TABLE; Schema: public; Owner: bklg
+-- Name: foia_bond; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE UNLOGGED TABLE public."foia_bond_(%s)" (
@@ -79,40 +79,22 @@ CREATE UNLOGGED TABLE public."foia_bond_(%s)" (
     update_time time without time zone,
     input_date timestamp without time zone,
     input_time time without time zone,
-    rej text,
     base_city_code text,
     base_city_name text,
     hearing_loc_code text,
     ij_code text,
-    ij_name text,
     "dec" text,
     comp_date timestamp without time zone,
     initial_bond text,
     rel_con text,
     ins_ta text,
     bond_hearing_telephonic text,
-    send_msg_wu text,
     bond_hear_req_date timestamp without time zone,
-    bond_hearing_date timestamp without time zone,
-    bond_hearing_time time without time zone,
-    adj1_cal_type text,
-    adj1_date timestamp without time zone,
-    adj1_time time without time zone,
-    adj1_rsn text,
-    adj1_telephonic text,
-    adj1_msg text,
-    adj2_cal_type text,
-    adj2_date timestamp without time zone,
-    adj2_time time without time zone,
-    adj2_rsn text,
-    adj2_telephonic text,
-    adj2_msg text,
     new_bond text,
     appeal_revd text,
     appeal_not_filed text,
     date_appeal_due timestamp without time zone,
     e_28_date timestamp without time zone,
-    scheduled_hear_loc text,
     bond_type text,
     filing_method text,
     filing_party text,
@@ -120,10 +102,10 @@ CREATE UNLOGGED TABLE public."foia_bond_(%s)" (
 );
 
 
-ALTER TABLE public."foia_bond_(%s)" OWNER TO bklg;
+ALTER TABLE public."foia_bond_(%s)" OWNER TO postgres;
 
 --
--- Name: foia_case; Type: TABLE; Schema: public; Owner: bklg
+-- Name: foia_case; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE UNLOGGED TABLE public."foia_case_(%s)" (
@@ -169,10 +151,10 @@ CREATE UNLOGGED TABLE public."foia_case_(%s)" (
 );
 
 
-ALTER TABLE public."foia_case_(%s)" OWNER TO bklg;
+ALTER TABLE public."foia_case_(%s)" OWNER TO postgres;
 
 --
--- Name: foia_charges; Type: TABLE; Schema: public; Owner: bklg
+-- Name: foia_charges; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE UNLOGGED TABLE public."foia_charges_(%s)" (
@@ -184,10 +166,10 @@ CREATE UNLOGGED TABLE public."foia_charges_(%s)" (
 );
 
 
-ALTER TABLE public."foia_charges_(%s)" OWNER TO bklg;
+ALTER TABLE public."foia_charges_(%s)" OWNER TO postgres;
 
 --
--- Name: foia_motion; Type: TABLE; Schema: public; Owner: bklg
+-- Name: foia_motion; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE UNLOGGED TABLE public."foia_motion_(%s)" (
@@ -235,10 +217,10 @@ CREATE UNLOGGED TABLE public."foia_motion_(%s)" (
 );
 
 
-ALTER TABLE public."foia_motion_(%s)" OWNER TO bklg;
+ALTER TABLE public."foia_motion_(%s)" OWNER TO postgres;
 
 --
--- Name: foia_proceeding; Type: TABLE; Schema: public; Owner: bklg
+-- Name: foia_proceeding; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE UNLOGGED TABLE public."foia_proceeding_(%s)" (
@@ -283,10 +265,10 @@ CREATE UNLOGGED TABLE public."foia_proceeding_(%s)" (
 );
 
 
-ALTER TABLE public."foia_proceeding_(%s)" OWNER TO bklg;
+ALTER TABLE public."foia_proceeding_(%s)" OWNER TO postgres;
 
 --
--- Name: foia_rider; Type: TABLE; Schema: public; Owner: bklg
+-- Name: foia_rider; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE UNLOGGED TABLE public."foia_rider_(%s)" (
@@ -304,10 +286,10 @@ CREATE UNLOGGED TABLE public."foia_rider_(%s)" (
 );
 
 
-ALTER TABLE public."foia_rider_(%s)" OWNER TO bklg;
+ALTER TABLE public."foia_rider_(%s)" OWNER TO postgres;
 
 --
--- Name: foia_schedule; Type: TABLE; Schema: public; Owner: bklg
+-- Name: foia_schedule; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE UNLOGGED TABLE public."foia_schedule_(%s)" (
@@ -344,10 +326,10 @@ CREATE UNLOGGED TABLE public."foia_schedule_(%s)" (
 );
 
 
-ALTER TABLE public."foia_schedule_(%s)" OWNER TO bklg;
+ALTER TABLE public."foia_schedule_(%s)" OWNER TO postgres;
 
 --
--- Name: foia_atty; Type: TABLE; Schema: public; Owner: bklg
+-- Name: foia_atty; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE UNLOGGED TABLE public."foia_atty_(%s)" (
@@ -361,10 +343,10 @@ CREATE UNLOGGED TABLE public."foia_atty_(%s)" (
 );
 
 
-ALTER TABLE public."foia_atty_(%s)" OWNER TO bklg;
+ALTER TABLE public."foia_atty_(%s)" OWNER TO postgres;
 
 --
--- Name: foia_caseid; Type: TABLE; Schema: public; Owner: bklg
+-- Name: foia_caseid; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE UNLOGGED TABLE public."foia_caseid_(%s)" (
@@ -374,10 +356,10 @@ CREATE UNLOGGED TABLE public."foia_caseid_(%s)" (
 );
 
 
-ALTER TABLE public."foia_caseid_(%s)" OWNER TO bklg;
+ALTER TABLE public."foia_caseid_(%s)" OWNER TO postgres;
 
 --
--- Name: foia_casepriority; Type: TABLE; Schema: public; Owner: bklg
+-- Name: foia_casepriority; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE UNLOGGED TABLE public."foia_casepriority_(%s)" (
@@ -389,10 +371,10 @@ CREATE UNLOGGED TABLE public."foia_casepriority_(%s)" (
 );
 
 
-ALTER TABLE public."foia_casepriority_(%s)" OWNER TO bklg;
+ALTER TABLE public."foia_casepriority_(%s)" OWNER TO postgres;
 
 --
--- Name: foia_custody; Type: TABLE; Schema: public; Owner: bklg
+-- Name: foia_custody; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE UNLOGGED TABLE public."foia_custody_(%s)" (
@@ -404,10 +386,10 @@ CREATE UNLOGGED TABLE public."foia_custody_(%s)" (
 );
 
 
-ALTER TABLE public."foia_custody_(%s)" OWNER TO bklg;
+ALTER TABLE public."foia_custody_(%s)" OWNER TO postgres;
 
 --
--- Name: foia_fedcourts; Type: TABLE; Schema: public; Owner: bklg
+-- Name: foia_fedcourts; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE UNLOGGED TABLE public."foia_fedcourts_(%s)" (
@@ -418,10 +400,10 @@ CREATE UNLOGGED TABLE public."foia_fedcourts_(%s)" (
 );
 
 
-ALTER TABLE public."foia_fedcourts_(%s)" OWNER TO bklg;
+ALTER TABLE public."foia_fedcourts_(%s)" OWNER TO postgres;
 
 --
--- Name: foia_juvenile; Type: TABLE; Schema: public; Owner: bklg
+-- Name: foia_juvenile; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE UNLOGGED TABLE public."foia_juvenile_(%s)" (
@@ -434,10 +416,10 @@ CREATE UNLOGGED TABLE public."foia_juvenile_(%s)" (
 );
 
 
-ALTER TABLE public."foia_juvenile_(%s)" OWNER TO bklg;
+ALTER TABLE public."foia_juvenile_(%s)" OWNER TO postgres;
 
 --
--- Name: foia_probono; Type: TABLE; Schema: public; Owner: bklg
+-- Name: foia_probono; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE UNLOGGED TABLE public."foia_probono_(%s)" (
@@ -509,10 +491,10 @@ CREATE UNLOGGED TABLE public."foia_probono_(%s)" (
 );
 
 
-ALTER TABLE public."foia_probono_(%s)" OWNER TO bklg;
+ALTER TABLE public."foia_probono_(%s)" OWNER TO postgres;
 
 --
--- Name: foia_reps; Type: TABLE; Schema: public; Owner: bklg
+-- Name: foia_reps; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE UNLOGGED TABLE public."foia_reps_(%s)" (
@@ -530,10 +512,10 @@ CREATE UNLOGGED TABLE public."foia_reps_(%s)" (
 );
 
 
-ALTER TABLE public."foia_reps_(%s)" OWNER TO bklg;
+ALTER TABLE public."foia_reps_(%s)" OWNER TO postgres;
 
 --
--- Name: foia_threembr; Type: TABLE; Schema: public; Owner: bklg
+-- Name: foia_threembr; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE UNLOGGED TABLE public."foia_threembr_(%s)" (
@@ -544,5 +526,5 @@ CREATE UNLOGGED TABLE public."foia_threembr_(%s)" (
 );
 
 
-ALTER TABLE public."foia_threembr_(%s)" OWNER TO bklg;
+ALTER TABLE public."foia_threembr_(%s)" OWNER TO postgres;
 

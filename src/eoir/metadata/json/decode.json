@@ -512,10 +512,6 @@
             "Immigration Judge",
             "tblLookupJudge.json"
         ],
-        "ij_name": [
-            "Immigration Judge",
-            ""
-        ],
         "dec": [
             "Decision",
             "tblLookupCourtDecision.json"
@@ -540,69 +536,9 @@
             "Hearing Medium",
             ""
         ],
-        "send_msg_wu": [
-            "Notice",
-            "tblLookupNOTICE.json"
-        ],
         "bond_hear_req_date": [
             "Date Bond Hearing Requested",
             ""
-        ],
-        "bond_hearing_date": [
-            "Hearing Date",
-            ""
-        ],
-        "bond_hearing_time": [
-            "Hearing Time",
-            ""
-        ],
-        "adj1_cal_type": [
-            "Hearing Type of First Adjourned Hearing",
-            "tbllookupCal_Type.json"
-        ],
-        "adj1_date": [
-            "Hearing Date of First Adjourned Hearing",
-            ""
-        ],
-        "adj1_time": [
-            "Hearing Time of First Adjourned Hearing",
-            ""
-        ],
-        "adj1_rsn": [
-            "Adjournment Reason of First Adjourned Hearing",
-            "tblAdjournmentCodes.json"
-        ],
-        "adj1_telephonic": [
-            "Medium of First Adjourned Hearing",
-            ""
-        ],
-        "adj1_msg": [
-            "Notice of First Adjourned Hearing",
-            "tblLookupNOTICE.json"
-        ],
-        "adj2_cal_type": [
-            "Hearing Type of First Adjourned Hearing",
-            "tbllookupCal_Type.json"
-        ],
-        "adj2_date": [
-            "Hearing Date of Second Adjourned Hearing",
-            ""
-        ],
-        "adj2_time": [
-            "Hearing Time of Second Adjourned Hearing",
-            ""
-        ],
-        "adj2_rsn": [
-            "Adjournment Reason of Second Adjourned Hearing",
-            "tblAdjournmentCodes.json"
-        ],
-        "adj2_telephonic": [
-            "Medium of Second Adjourned Hearing",
-            ""
-        ],
-        "adj2_msg": [
-            "Notice of Second Adjourned Hearing",
-            "tblLookupNOTICE.json"
         ],
         "new_bond": [
             "New Bond Amount",
@@ -619,10 +555,6 @@
         "e_28_date": [
             "EOIR-28 Filing Date",
             ""
-        ],
-        "scheduled_hear_loc": [
-            "Upcoming Hearing Location",
-            "tblLookupHloc.json"
         ],
         "bond_type": [
             "Bond Type",
